@@ -30,3 +30,11 @@
 *.exe
 *.out
 *.app
+
+
+# misc
+A0/*
+A01/*
+A02/*
+A03/Example/*
+Class/*
