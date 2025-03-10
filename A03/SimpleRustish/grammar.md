@@ -18,8 +18,10 @@ In the interests of creating a grammar for Rustish, we will begin with a massive
 
 <exprStmt>  ::= <expression> ";"
 <expression> ::= <assignment>
-<assignment> ::= IDENTIFIER "=" (NUMBER | BOOL)
-
+<assignment> ::= IDENTIFIER "=" <assignment>
+             |   <logic_or>
+<logic_or>   ::= <logic_and> ()
 ```
+3. 
 
 the parser should output valid or invalid

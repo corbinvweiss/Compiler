@@ -30,7 +30,7 @@ eol    \n
 
 ";"         { return SEMICOLON;}
 
-"="         { return EQUAL;}
+"="         { return ASSIGN;}
 
 \+          { return PLUS; } 
 
@@ -43,6 +43,16 @@ eol    \n
 \(          { return LPAREN; } 
 
 \)          { return RPAREN; } 
+
+"=="        { return EQUAL;}
+"!="        { return NEQ;}
+"||"        { return OR;}
+"&&"        { return AND;}
+"<"         { return LT;}
+">"         { return GT;}
+">="        { return GEQ;}
+"<="        { return LEQ;}
+"!"         { return BANG;}
 
 "let"       { return LET;}
 
