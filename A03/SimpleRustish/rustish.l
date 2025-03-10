@@ -84,7 +84,7 @@ eol    \n
 
 \%          { return MODULUS; }
 
-\&&         { return AND; }
+\)          { return RPAREN; } 
 
 "||"        { return OR; }
 
