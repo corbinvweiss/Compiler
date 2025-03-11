@@ -15,7 +15,7 @@ rustish.tab.o: rustish.tab.cpp
 #	mv -f rustish.tab.c rustish.tab.cpp
 
 rustish.tab.cpp: rustish.y 
-	bison -v -d -o rustish.tab.cpp rustish.y
+	bison -Wcounterexamples -v -d -o rustish.tab.cpp rustish.y
 
 lex.yy.o: lex.yy.cpp
 	${CC} $(OP) $(FLAGS) -Wno-sign-compare -c lex.yy.cpp 

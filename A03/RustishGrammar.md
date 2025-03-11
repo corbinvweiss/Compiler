@@ -31,8 +31,7 @@ TODO: add arrays. Where would they fit?
 
 
 <expression>    ::= <assignment>
-<assignment>    ::= IDENTIFIER "=" <assignment>
-                |   <logic_or>
+<assignment>    ::= IDENTIFIER "=" <logic_or>
 <logic_or>      ::= <logic_and> ("||" <logic_and>)*
 <logic_and>     ::= <equality> ("&&" <equality>)*
 <equality>      ::= <comparison> (("!=" | "==") <comparison>)*

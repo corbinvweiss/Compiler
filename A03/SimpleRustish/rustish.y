@@ -60,8 +60,7 @@ expression  : assignment
                 std::cout << "expression\n";
             }
             ;
-assignment  : IDENTIFIER EQUAL assignment
-            | logic_or
+assignment  : logic_or
             {
                 std::cout << "1\n";
             }
