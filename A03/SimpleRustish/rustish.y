@@ -13,41 +13,39 @@ void yyerror(const char *s);
 %}
 
 /* BISON Declarations */
-%token LET MUT I32 BOOL 
-    SEMICOLON EQUAL COLON PLUS MINUS TIMES DIVIDE LPAREN RPAREN
-    IDENTIFIER NUMBER
-    ERROR
-%left PLUS MINUS
-%left TIMES DIVIDE
-
+%token MAIN LCURLY RCURLY IDENTIFIER SEMICOLON NUMBER ASSIGN PRINT COMMA
+    PRINTLN ARROW COLON FN I32 BOOL LET MUT FALSE TRUE LPAREN RPAREN 
+    PLUS MINUS TIMES DIVIDE MODULUS AND OR NOT IF ELSE WHILE RETURN
+    LSQBRACK RSQBRACK NE EQ GT LT LE GE
 /* Grammar rules */
 %%
 
-declaration : vardecl
-            | statement;
+/* This program will accept a program made up of empty functions */
 
-vardecl     : LET MUT IDENTIFIER COLON type SEMICOLON {
-                std::cout << "OK\n";
-            };
+program         : func_def_list main_def
+                ;
 
-type        : I32
-            | BOOL;
+func_def_list   : func_def_list func_def
+                | epsilon
+                ;
 
-statement   : exprstmt;
-exprstmt    : expression SEMICOLON;
-expression  : assignment;
-assignment  : IDENTIFIER EQUAL rval {
-                std::cout << "OK" << '\n';
-            };
-            
-rval        : NUMBER
-            | BOOL;
+func_def        : FN IDENTIFIER LPAREN RPAREN ARROW func_body
+                ;
 
+main_def        : FN MAIN LPAREN RPAREN func_body
+                ;
+
+func_body       : LCURLY RCURLY
+                ;
+
+epsilon         :
+                ;
 
 %%
 
 
 int main() {
+    // todo: pass in a file here to parse with the grammar. 
     while (true) {
         yyparse();
     }
