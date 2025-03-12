@@ -4,9 +4,11 @@ FLAGS = -g -Wall -Wextra -Wpedantic -Wno-unused-function -Wno-unused-parameter -
 
 all: rustish
 
-rustish: rustish.tab.o lex.yy.o 
-	${CC} ${OP} ${FLAGS} -o rustish rustish.tab.o lex.yy.o 
+rustish: rustish.tab.o lex.yy.o parsetree.o
+	${CC} ${OP} ${FLAGS} -o rustish rustish.tab.o lex.yy.o parsetree.o
 
+parsetree.o: parsetree.cpp
+	${CC} ${OP} ${FLAGS} -c parsetree.cpp
 
 rustish.tab.o: rustish.tab.cpp
 	${CC} ${OP} ${FLAGS} -c rustish.tab.cpp

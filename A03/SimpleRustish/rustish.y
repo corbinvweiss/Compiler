@@ -6,6 +6,9 @@
 
 #include <iostream>
 #include <limits>
+#include "parsetree.h"
+
+#define YYSTYPE ParseTreeNode *
 
 int yylex();
 int yyparse();
@@ -24,15 +27,23 @@ extern FILE *yyin;
 
 /* This program will accept a program made up of empty functions */
 
-program         : main_def {
-                    std::cout << "OK\n";
+input           : program {
+                    auto node = $1;
+                    node->show(0);
+                    delete node;
+                }
+
+program         : main_def
+                ;
+
+main_def        : FN MAIN LPAREN RPAREN func_body {
+                    $$ = new MainDefNode($5);
                 }
                 ;
 
-main_def        : FN MAIN LPAREN RPAREN func_body
-                ;
-
-func_body       : LCURLY RCURLY
+func_body       : LCURLY RCURLY {
+                    $$ = new FuncBodyNode();
+                }
                 ;
 
 %%
