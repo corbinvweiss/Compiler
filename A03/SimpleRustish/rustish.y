@@ -10,6 +10,8 @@
 int yylex();
 int yyparse();
 void yyerror(const char *s);
+
+extern FILE *yyin;
 %}
 
 /* BISON Declarations */
@@ -22,14 +24,9 @@ void yyerror(const char *s);
 
 /* This program will accept a program made up of empty functions */
 
-program         : func_def_list main_def
-                ;
-
-func_def_list   : func_def_list func_def
-                | epsilon
-                ;
-
-func_def        : FN IDENTIFIER LPAREN RPAREN ARROW func_body
+program         : main_def {
+                    std::cout << "OK\n";
+                }
                 ;
 
 main_def        : FN MAIN LPAREN RPAREN func_body
@@ -38,16 +35,23 @@ main_def        : FN MAIN LPAREN RPAREN func_body
 func_body       : LCURLY RCURLY
                 ;
 
-epsilon         :
-                ;
-
 %%
 
 
-int main() {
-    // todo: pass in a file here to parse with the grammar. 
-    while (true) {
-        yyparse();
+int main(int argc, char **argv) {
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <filename>" << std::endl;
+        return 1;
     }
-}
 
+    yyin = fopen(argv[1], "r");
+    if (!yyin) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    yyparse();  // Call the Bison parser
+
+    fclose(yyin);
+    return 0;
+}
