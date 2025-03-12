@@ -24,7 +24,7 @@ eol    \n
 
 {ws}        {}
 {tab}       {}
-{eol}       { return 0; } 
+{eol}       {} 
 
 "let"       { return LET;}
 
@@ -112,7 +112,7 @@ eol    \n
                 return NUMBER;
             }
             
-.           { 
+.           {
                /*yytext[0];*/ 
             }
 

@@ -14,4 +14,4 @@ When you are done run
 make clean
 ```
 
-Right now the parser can only handle a main function, and only outputs "OK" or "syntax error". 
+The parser can handle up to what is included in test.ri.

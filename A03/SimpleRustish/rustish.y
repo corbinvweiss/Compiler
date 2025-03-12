@@ -15,6 +15,7 @@ int yyparse();
 void yyerror(const char *s);
 
 extern FILE *yyin;
+extern char* yytext;
 %}
 
 /* BISON Declarations */
@@ -33,7 +34,26 @@ input           : program {
                     delete node;
                 }
 
-program         : main_def
+program         : func_def_list main_def {
+                    $$ = new ProgramNode($1, $2);
+                }
+                ;
+
+func_def_list   : func_def_list func_def {
+                    // append the new func_def to the func_def_list
+                    // Cast $1 from ParseTreeNode* to FuncDefListNode* before calling append.
+                    static_cast<FuncDefListNode*>($1)->append($2);
+                    $$ = $1;    // return the func_def_list
+                }
+                | /* epsilon */ {
+                    // Create a new, empty function definition list.
+                    $$ = new FuncDefListNode();
+                }
+                ;
+
+func_def        : FN identifier LPAREN RPAREN func_body {
+                    $$ = new FuncDefNode($2, $5);
+                }
                 ;
 
 main_def        : FN MAIN LPAREN RPAREN func_body {
@@ -45,6 +65,10 @@ func_body       : LCURLY RCURLY {
                     $$ = new FuncBodyNode();
                 }
                 ;
+
+identifier      : IDENTIFIER {
+                    $$ = new IdentifierNode(yytext);
+                }
 
 %%
 
