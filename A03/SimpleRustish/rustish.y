@@ -33,6 +33,7 @@ input           : program {
                     node->show(0);
                     delete node;
                 }
+                ;
 
 program         : func_def_list main_def {
                     $$ = new ProgramNode($1, $2);
@@ -76,6 +77,7 @@ params_list     : params_list COMMA var_decl {
                 | var_decl {
                     $$ = new ParamsListNode($1);
                 }
+                ;
 
 var_decl        : identifier COLON type {
                     $$ = new VarDeclNode($1, $3);
@@ -96,8 +98,8 @@ type            : I32 {
                 }
                 ;
 
-func_body       : LCURLY local_decl_list RCURLY {
-                    $$ = new FuncBodyNode($2);
+func_body       : LCURLY local_decl_list statement_list RCURLY {
+                    $$ = new FuncBodyNode($2, $3);
                 }
                 ;
 
@@ -112,10 +114,29 @@ local_decl_list : local_decl_list LET MUT var_decl SEMICOLON {
                     // Create a new empty local declaration list
                     $$ = new LocalDeclListNode();
                 }
+                ;
+
+statement_list  : statement_list statement {
+                    static_cast<StatementListNode*>($1)->append($2);
+                    $$ = $1;
+                }
+                | statement {
+                    $$ = new StatementListNode($1);
+                }
+                | /* epsilon */ {
+                    $$ = new StatementListNode();
+                }
+                ;
+
+statement       : SEMICOLON {
+                    $$ = new StatementNode();
+                }
+                ;
 
 identifier      : IDENTIFIER {
                     $$ = new IdentifierNode(yytext);
                 }
+                ;
 
 %%
 

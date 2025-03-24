@@ -158,15 +158,17 @@ void TypeNode::show(int depth) {
     std::cout << "type: " << typeToString(type) << "\n";
 }
 
-FuncBodyNode::FuncBodyNode(ParseTreeNode *local_decl_list) 
-    :local_decl_list(local_decl_list) {}
+FuncBodyNode::FuncBodyNode(ParseTreeNode *local_decl_list, ParseTreeNode *statement_list) 
+    :local_decl_list(local_decl_list), statement_list(statement_list) {}
 FuncBodyNode::~FuncBodyNode() {
     delete local_decl_list;
+    delete statement_list;
 }
 void FuncBodyNode::show(int depth) {
     tab(depth);
     std::cout << "func_body\n";
     local_decl_list->show(depth+1);
+    statement_list->show(depth+1);
 }
 
 LocalDeclListNode::LocalDeclListNode() {
@@ -183,9 +185,51 @@ void LocalDeclListNode::append(ParseTreeNode *declaration) {
 void LocalDeclListNode::show(int depth) {
     tab(depth);
     std::cout << "local_decl_list\n";
-    for (ParseTreeNode *declaration : *local_decl_list) {
-        declaration->show(depth+1);
+    if(!local_decl_list->empty()) {
+        for (ParseTreeNode *declaration : *local_decl_list) {
+            declaration->show(depth+1);
+        }
     }
+    else {
+        tab(depth+1);
+        std::cout << "(none)\n";
+    }
+}
+
+StatementListNode::StatementListNode() {
+    statement_list = new std::vector<ParseTreeNode *> ();
+}
+StatementListNode::StatementListNode(ParseTreeNode *statement) {
+    statement_list = new std::vector<ParseTreeNode *> ();
+    statement_list->push_back(statement);
+}
+StatementListNode::~StatementListNode() {
+    for(auto statement : *statement_list) {
+        delete statement;
+    }
+}
+void StatementListNode::append(ParseTreeNode *statement) {
+    statement_list->push_back(statement);
+}
+void StatementListNode::show(int depth) {
+    tab(depth);
+    std::cout << "statement_list\n";
+    if(!statement_list->empty()) {
+        for (ParseTreeNode *statement : *statement_list) {
+            statement->show(depth+1);
+        }
+    }
+    else {
+        tab(depth+1);
+        std::cout << "(none)\n";
+    }
+}
+
+StatementNode::StatementNode() {}
+StatementNode::~StatementNode() {}
+void StatementNode::show(int depth) {
+    tab(depth);
+    std::cout << "statement\n";
 }
 
 IdentifierNode::IdentifierNode(std::string id):

@@ -21,3 +21,5 @@ The parser can handle up to what is included in test.ri.
 ```
 fn test() -> bool {}
 ```
+TODO: add support for this.
+

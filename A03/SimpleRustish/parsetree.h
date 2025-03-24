@@ -107,9 +107,9 @@ class TypeNode: public ParseTreeNode {
 class FuncBodyNode: public ParseTreeNode {
     private:
         ParseTreeNode *local_decl_list;
-        // todo: add statement_list
+        ParseTreeNode *statement_list;
     public:
-        FuncBodyNode(ParseTreeNode*);
+        FuncBodyNode(ParseTreeNode *local_decl_list, ParseTreeNode *statement_list);
         ~FuncBodyNode();
         void show(int depth) override;  // shows itself.
 };
@@ -121,6 +121,24 @@ class LocalDeclListNode: public ParseTreeNode {
         LocalDeclListNode();
         ~LocalDeclListNode();
         void append(ParseTreeNode *declaration);
+        void show(int depth) override;
+};
+
+class StatementListNode: public ParseTreeNode {
+    private:
+        std::vector<ParseTreeNode *> *statement_list;
+    public:
+        StatementListNode();
+        StatementListNode(ParseTreeNode *statement);
+        ~StatementListNode();
+        void append(ParseTreeNode *statement);
+        void show(int depth) override;
+};
+
+class StatementNode: public ParseTreeNode {
+    public:
+        StatementNode();
+        ~StatementNode();
         void show(int depth) override;
 };
 
