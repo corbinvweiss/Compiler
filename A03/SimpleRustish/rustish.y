@@ -51,7 +51,13 @@ func_def_list   : func_def_list func_def {
                 }
                 ;
 
-func_def        : FN identifier LPAREN RPAREN func_body {
+func_def        : FN identifier LPAREN params_list RPAREN ARROW type func_body {
+                    $$ = new FuncDefNode($2, $4, $7, $8);
+                }
+                | FN identifier LPAREN params_list RPAREN func_body {
+                    $$ = new FuncDefNode($2, $4, $6);
+                }
+                | FN identifier LPAREN RPAREN func_body {
                     $$ = new FuncDefNode($2, $5);
                 }
                 ;
@@ -61,10 +67,49 @@ main_def        : FN MAIN LPAREN RPAREN func_body {
                 }
                 ;
 
-func_body       : LCURLY RCURLY {
-                    $$ = new FuncBodyNode();
+params_list     : params_list COMMA var_decl {
+                    // append new var_decl to params_list
+                    // cast $1 to instance of params_list before appending
+                    static_cast<ParamsListNode*>($1)->append($3);
+                    $$ = $1;     // return the params_list
+                }
+                | var_decl {
+                    $$ = new ParamsListNode($1);
+                }
+
+var_decl        : identifier COLON type {
+                    $$ = new VarDeclNode($1, $3);
                 }
                 ;
+
+type            : I32 {
+                    $$ = new TypeNode(Type::_I32);
+                }
+                | BOOL {
+                    $$ = new TypeNode(Type::_BOOL);
+                }
+                | LSQBRACK I32 RSQBRACK {
+                    $$ = new TypeNode(Type::ARRAY_I32);
+                }
+                | LSQBRACK BOOL RSQBRACK {
+                    $$ = new TypeNode(Type::ARRAY_BOOL);
+                }
+                ;
+
+func_body       : LCURLY local_decl_list RCURLY {
+                    $$ = new FuncBodyNode($2);
+                }
+                ;
+
+local_decl_list : local_decl_list LET MUT var_decl SEMICOLON {
+                    // append the new declaration to the local_decl_list
+                    static_cast<LocalDeclListNode*>($1)->append($4);
+                    $$ = $1;
+                }
+                | /* epsilon */ {
+                    // Create a new empty local declaration list
+                    $$ = new LocalDeclListNode();
+                }
 
 identifier      : IDENTIFIER {
                     $$ = new IdentifierNode(yytext);

@@ -15,3 +15,9 @@ make clean
 ```
 
 The parser can handle up to what is included in test.ri.
+
+## Questions:
+1. At this point the grammar cannot handle a function with no parameters that has a return type such as 
+```
+fn test() -> bool {}
+```

@@ -11,6 +11,15 @@ https://www.cs.southern.edu/halterman/Courses/Winter2025/415/Assignments/parser.
 #include <vector>
 #include <string>
 
+enum Type {
+    NONE,
+    _I32,
+    _BOOL,
+    ARRAY_I32,
+    ARRAY_BOOL
+};
+
+
 class ParseTreeNode {
     public:
         ParseTreeNode();
@@ -41,10 +50,16 @@ class FuncDefListNode: public ParseTreeNode {
 };
 
 class FuncDefNode: public ParseTreeNode {
+    // 1. with parameters and return type
+    // 2. with parameters and no return type
     protected:
         ParseTreeNode *identifier;
+        ParseTreeNode *parameters;
+        ParseTreeNode *returntype;
         ParseTreeNode *body;
     public:
+        FuncDefNode(ParseTreeNode *identifier, ParseTreeNode *parameters, ParseTreeNode *returntype, ParseTreeNode *body);
+        FuncDefNode(ParseTreeNode *identifier, ParseTreeNode *parameters, ParseTreeNode *body);
         FuncDefNode(ParseTreeNode *identifier, ParseTreeNode *body);
         ~FuncDefNode();
         void show(int depth) override;
@@ -59,12 +74,54 @@ class MainDefNode: public ParseTreeNode {
         void show(int depth) override;  // calls the show function for its body
 };
 
-class FuncBodyNode: public ParseTreeNode {
-    // todo: add declaration list and statement list here
+class ParamsListNode: public ParseTreeNode {
+    protected:
+        std::vector<ParseTreeNode *> *params_list;
     public:
-        FuncBodyNode();
+        ParamsListNode(ParseTreeNode *param);
+        ParamsListNode();
+        ~ParamsListNode();
+        void append(ParseTreeNode* var_decl);
+        void show(int depth) override;
+};
+
+class VarDeclNode: public ParseTreeNode {
+    protected:
+        ParseTreeNode *identifier;
+        ParseTreeNode *type;
+    public:
+        VarDeclNode(ParseTreeNode* identifier, ParseTreeNode *type);
+        ~VarDeclNode();
+        void show(int depth) override;
+};
+
+class TypeNode: public ParseTreeNode {
+    protected:
+        Type type;
+    public:
+        TypeNode(Type type);
+        ~TypeNode();
+        void show(int depth) override;
+};
+
+class FuncBodyNode: public ParseTreeNode {
+    private:
+        ParseTreeNode *local_decl_list;
+        // todo: add statement_list
+    public:
+        FuncBodyNode(ParseTreeNode*);
         ~FuncBodyNode();
         void show(int depth) override;  // shows itself.
+};
+
+class LocalDeclListNode: public ParseTreeNode {
+    private:
+        std::vector<ParseTreeNode *> *local_decl_list;
+    public:
+        LocalDeclListNode();
+        ~LocalDeclListNode();
+        void append(ParseTreeNode *declaration);
+        void show(int depth) override;
 };
 
 class IdentifierNode: public ParseTreeNode {

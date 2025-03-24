@@ -1,13 +1,11 @@
-fn test1() {
-
+fn test1(number: i32, truth: bool) -> bool {
 
 }
 
-fn test2() {
-
+fn test2(a: bool) -> [bool] {
 
 }
 
 fn main() {
-
+    
 }
