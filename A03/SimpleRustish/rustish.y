@@ -102,8 +102,10 @@ func_body       : LCURLY local_decl_list RCURLY {
                 ;
 
 local_decl_list : local_decl_list LET MUT var_decl SEMICOLON {
-                    // append the new declaration to the local_decl_list
+
                     static_cast<LocalDeclListNode*>($1)->append($4);
+
+                    // Return the updated local_decl_list
                     $$ = $1;
                 }
                 | /* epsilon */ {

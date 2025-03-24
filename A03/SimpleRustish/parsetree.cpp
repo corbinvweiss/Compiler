@@ -166,9 +166,12 @@ FuncBodyNode::~FuncBodyNode() {
 void FuncBodyNode::show(int depth) {
     tab(depth);
     std::cout << "func_body\n";
+    local_decl_list->show(depth+1);
 }
 
-LocalDeclListNode::LocalDeclListNode() {}
+LocalDeclListNode::LocalDeclListNode() {
+    local_decl_list = new std::vector<ParseTreeNode *> ();
+}
 LocalDeclListNode::~LocalDeclListNode() {
     for (ParseTreeNode *declaration : *local_decl_list) {
         delete declaration;
