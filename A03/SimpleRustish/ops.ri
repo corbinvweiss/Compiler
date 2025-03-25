@@ -1,0 +1,9 @@
+fn main() {
+    let mut a: bool;
+    print(-5);
+    println(+5);
+    a = !5;
+
+    println(2 + 2);
+    println(1 % 2);
+}

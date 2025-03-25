@@ -84,8 +84,6 @@ eol    \n
 
 \%          { return MODULUS; }
 
-\&&         { return AND; }
-
 "||"        { return OR; }
 
 \!          { return NOT; }

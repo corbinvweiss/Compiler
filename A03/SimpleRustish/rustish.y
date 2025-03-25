@@ -23,10 +23,17 @@ extern char* yytext;
     PRINTLN ARROW COLON FN I32 BOOL LET MUT FALSE TRUE LPAREN RPAREN 
     PLUS MINUS TIMES DIVIDE MODULUS AND OR NOT IF ELSE WHILE RETURN
     LSQBRACK RSQBRACK NE EQ GT LT LE GE
-/* Grammar rules */
+
+%left OR                   /* Lowest precedence */
+%left AND
+%left EQ NE                 
+%left GT LT LE GE
+%left PLUS MINUS MODULUS    
+%left TIMES DIVIDE          
+%left NOT                  /* Higher precedence */
 %%
 
-/* This program will accept a program made up of empty functions */
+/* Grammar rules */
 
 input           : program {
                     auto node = $1;
@@ -120,18 +127,110 @@ statement_list  : statement_list statement {
                     static_cast<StatementListNode*>($1)->append($2);
                     $$ = $1;
                 }
-                | statement {
-                    $$ = new StatementListNode($1);
-                }
                 | /* epsilon */ {
                     $$ = new StatementListNode();
                 }
                 ;
 
-statement       : SEMICOLON {
-                    $$ = new StatementNode();
+statement       : expression SEMICOLON {
+                    $$ = new StatementNode($1);
+                }
+                | identifier ASSIGN expression SEMICOLON {
+                    $$ = new AssignmentStatementNode($1, $3);
+                }
+                | PRINT LPAREN actual_args RPAREN SEMICOLON {
+                    $$ = new PrintStatementNode($3);
+                }
+                | PRINTLN LPAREN actual_args RPAREN SEMICOLON {
+                    $$ = new PrintlnStatementNode($3);
                 }
                 ;
+
+actual_args     : expression {
+                    $$ = new ActualArgsNode($1);
+                }
+                | actual_args COMMA expression {
+                    static_cast<ActualArgsNode *>($1)->append($3);
+                }
+                | /* epsilon */ {
+                    $$ = new ActualArgsNode();
+                }
+
+expression      : NUMBER {
+                    $$ = new NumberNode(atoi(yytext));
+                }
+                | bool {
+                    $$ = $1;
+                }
+                | identifier {
+                    $$ = $1;
+                }
+                | unary {
+                    $$ = $1;
+                }
+                | binary {
+                    $$ = $1;
+                }
+                ;
+
+binary          : expression PLUS expression {
+                    $$ = new BinaryNode(Operator::_PLUS, $1, $3);
+                }
+                | expression MINUS expression {
+                    $$ = new BinaryNode(Operator::_MINUS, $1, $3);
+                }
+                | expression TIMES expression {
+                    $$ = new BinaryNode(Operator::_TIMES, $1, $3);
+                }
+                | expression DIVIDE expression {
+                    $$ = new BinaryNode(Operator::_DIVIDE, $1, $3);
+                }
+                | expression MODULUS expression {
+                    $$ = new BinaryNode(Operator::_MODULUS, $1, $3);
+                }
+                | expression AND expression {
+                    $$ = new BinaryNode(Operator::_AND, $1, $3);
+                }
+                | expression OR expression {
+                    $$ = new BinaryNode(Operator::_OR, $1, $3);
+                }
+                | expression EQ expression {
+                    $$ = new BinaryNode(Operator::_EQ, $1, $3);
+                }
+                | expression NE expression {
+                    $$ = new BinaryNode(Operator::_NE, $1, $3);
+                }
+                | expression LE expression {
+                    $$ = new BinaryNode(Operator::_LE, $1, $3);
+                }
+                | expression GE expression {
+                    $$ = new BinaryNode(Operator::_GE, $1, $3);
+                }
+                | expression GT expression {
+                    $$ = new BinaryNode(Operator::_GT, $1, $3);
+                }
+                | expression LT expression {
+                    $$ = new BinaryNode(Operator::_LT, $1, $3);
+                }
+                ;
+
+unary           : MINUS expression {
+                    $$ = new UnaryNode(Operator::_MINUS, $2);
+                }
+                | PLUS expression {
+                    $$ = new UnaryNode(Operator::_PLUS, $2);
+                }
+                | NOT expression {
+                    $$ = new UnaryNode(Operator::_NOT, $2);
+                }
+                ;
+
+bool            : TRUE {
+                    $$ = new BoolNode(true);
+                }
+                | FALSE {
+                    $$ = new BoolNode(false);
+                }
 
 identifier      : IDENTIFIER {
                     $$ = new IdentifierNode(yytext);

@@ -19,6 +19,23 @@ enum Type {
     ARRAY_BOOL
 };
 
+enum Operator {
+    _PLUS,
+    _MINUS,
+    _TIMES,
+    _DIVIDE,
+    _MODULUS,
+    _AND,
+    _OR,
+    _EQ,
+    _NE,
+    _LT,
+    _LE,
+    _GT,
+    _GE,
+    _NOT
+};
+
 
 class ParseTreeNode {
     public:
@@ -136,9 +153,90 @@ class StatementListNode: public ParseTreeNode {
 };
 
 class StatementNode: public ParseTreeNode {
+    private:
+        ParseTreeNode *contents;
     public:
         StatementNode();
+        StatementNode(ParseTreeNode *contents);
         ~StatementNode();
+        void show(int depth) override;
+};
+
+class AssignmentStatementNode: public ParseTreeNode {
+    private:
+        ParseTreeNode *identifier;
+        ParseTreeNode *expression;
+    public:
+        AssignmentStatementNode(ParseTreeNode *identifier, ParseTreeNode *expression);
+        ~AssignmentStatementNode();
+        void show(int depth) override;
+};
+
+class PrintStatementNode: public ParseTreeNode {
+    private:
+        ParseTreeNode *arguments;
+    public:
+        PrintStatementNode(ParseTreeNode *arguments);
+        ~PrintStatementNode();
+        void show(int depth) override;
+};
+
+class PrintlnStatementNode: public ParseTreeNode {
+    private:
+        ParseTreeNode *arguments;
+    public:
+        PrintlnStatementNode(ParseTreeNode *arguments);
+        ~PrintlnStatementNode();
+        void show(int depth) override;
+};
+
+class ActualArgsNode: public ParseTreeNode {
+    private:
+        std::vector<ParseTreeNode *> *expressions;
+    public:
+        ActualArgsNode();
+        ActualArgsNode(ParseTreeNode *expression);
+        ~ActualArgsNode();
+        void append(ParseTreeNode *expression);
+        void show(int depth) override;
+};
+
+class UnaryNode: public ParseTreeNode {
+    private:
+        Operator op;
+        ParseTreeNode *expression;
+    public:
+        UnaryNode(Operator op, ParseTreeNode *expression);
+        ~UnaryNode();
+        void show(int depth) override;
+};
+
+class BinaryNode: public ParseTreeNode {
+    private:
+        Operator op;
+        ParseTreeNode *left;
+        ParseTreeNode *right;
+    public:
+        BinaryNode(Operator op, ParseTreeNode *left, ParseTreeNode *right);
+        ~BinaryNode();
+        void show(int depth) override;
+};
+
+class NumberNode: public ParseTreeNode {
+    protected:
+        int value;
+    public:
+        NumberNode(int value);
+        ~NumberNode();
+        void show(int depth) override;
+};
+
+class BoolNode: public ParseTreeNode {
+    protected:
+        bool value;
+    public:
+        BoolNode(bool value);
+        ~BoolNode();
         void show(int depth) override;
 };
 
@@ -149,4 +247,4 @@ class IdentifierNode: public ParseTreeNode {
         IdentifierNode(std::string value);
         ~IdentifierNode();
         void show(int depth) override;
-};
+};;

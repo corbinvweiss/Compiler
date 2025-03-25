@@ -1,6 +1,8 @@
 fn test(a: i32, b: bool) -> bool {
     let mut i: i32;
     let mut abracadabra: bool;
+    i = 52;
+    abracadabra = false;
 }
 
 fn main() {

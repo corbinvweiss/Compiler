@@ -1,0 +1,4 @@
+fn main() {
+    print(1, false);
+    println(1, 5);
+}
