@@ -379,6 +379,21 @@ void ActualArgsNode::show(int depth) {
     }
 }
 
+CallNode::CallNode(ParseTreeNode* identifier, ParseTreeNode* arguments)
+    : identifier(identifier), arguments(arguments) {}
+
+CallNode::~CallNode() {
+    delete identifier;
+    delete arguments;
+}
+
+void CallNode::show(int depth) {
+    tab(depth);
+    std::cout << "func_call\n";
+    identifier->show(depth + 1);
+    arguments->show(depth + 1);
+}
+
 UnaryNode::UnaryNode(Operator op, ParseTreeNode* expression)
     : op(op), expression(expression) {}
 UnaryNode::~UnaryNode() {

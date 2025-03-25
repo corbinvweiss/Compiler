@@ -1,0 +1,9 @@
+fn test(a: i32, b: bool) {
+    if b {
+        print(a);
+    }
+}
+
+fn main() {
+    test(5, true);
+}

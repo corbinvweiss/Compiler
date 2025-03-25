@@ -232,6 +232,16 @@ class ActualArgsNode: public ParseTreeNode {
         void show(int depth) override;
 };
 
+class CallNode: public ParseTreeNode {
+    private:
+        ParseTreeNode *identifier;
+        ParseTreeNode *arguments;
+    public:
+        CallNode(ParseTreeNode *identifier, ParseTreeNode *arguments);
+        ~CallNode();
+        void show(int depth) override;
+};
+
 class UnaryNode: public ParseTreeNode {
     private:
         Operator op;

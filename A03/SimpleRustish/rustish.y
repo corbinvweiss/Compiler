@@ -154,7 +154,14 @@ statement       : expression SEMICOLON {
                 | WHILE expression LCURLY statement_list RCURLY {
                     $$ = new WhileStatementNode($2, $4);
                 }
+                | func_call_expression SEMICOLON {
+                    $$ = $1;
+                }
                 ;
+
+func_call_expression : identifier LPAREN actual_args RPAREN {
+                    $$ = new CallNode($1, $3);
+                }
 
 actual_args     : expression {
                     $$ = new ActualArgsNode($1);
