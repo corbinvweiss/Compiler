@@ -95,15 +95,6 @@ void FuncDefListNode::show(int depth) {
 FuncDefNode::FuncDefNode(ParseTreeNode *identifier, 
     ParseTreeNode *parameters, ParseTreeNode *returntype, ParseTreeNode *body)
     :identifier(identifier), parameters(parameters), returntype(returntype), body(body) {}
-// constructor for function definition with no return type
-FuncDefNode::FuncDefNode(ParseTreeNode *identifier, 
-    ParseTreeNode *parameters, ParseTreeNode *body)
-    :identifier(identifier), parameters(parameters), 
-    returntype(new TypeNode(Type::NONE)), body(body) {}
-// constructor for function definition with no parameters or return type; 
-FuncDefNode::FuncDefNode(ParseTreeNode *identifier, ParseTreeNode *body) 
-    :identifier(identifier), parameters(new ParamsListNode()), 
-    returntype(new TypeNode(Type::NONE)), body(body) {}
 FuncDefNode::~FuncDefNode() {
     delete identifier;
     delete body;
@@ -112,8 +103,12 @@ void FuncDefNode::show(int depth) {
     tab(depth);
     std::cout << "func_def\n";
     identifier->show(depth+1);
-    parameters->show(depth+1);
-    returntype->show(depth+1);
+    if(parameters) {
+        parameters->show(depth+1);
+    }
+    if(returntype) {
+        returntype->show(depth+1);
+    }
     body->show(depth+1);
 }
 

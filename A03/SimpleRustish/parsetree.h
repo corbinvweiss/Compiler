@@ -76,8 +76,6 @@ class FuncDefNode: public ParseTreeNode {
         ParseTreeNode *body;
     public:
         FuncDefNode(ParseTreeNode *identifier, ParseTreeNode *parameters, ParseTreeNode *returntype, ParseTreeNode *body);
-        FuncDefNode(ParseTreeNode *identifier, ParseTreeNode *parameters, ParseTreeNode *body);
-        FuncDefNode(ParseTreeNode *identifier, ParseTreeNode *body);
         ~FuncDefNode();
         void show(int depth) override;
 };

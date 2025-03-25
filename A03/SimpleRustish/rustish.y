@@ -63,10 +63,13 @@ func_def        : FN identifier LPAREN params_list RPAREN ARROW type func_body {
                     $$ = new FuncDefNode($2, $4, $7, $8);
                 }
                 | FN identifier LPAREN params_list RPAREN func_body {
-                    $$ = new FuncDefNode($2, $4, $6);
+                    $$ = new FuncDefNode($2, $4, nullptr, $6);
+                }
+                | FN identifier LPAREN RPAREN ARROW type func_body {
+                    $$ = new FuncDefNode($2, nullptr, $6, $7);
                 }
                 | FN identifier LPAREN RPAREN func_body {
-                    $$ = new FuncDefNode($2, $5);
+                    $$ = new FuncDefNode($2, nullptr, nullptr, $5);
                 }
                 ;
 
@@ -154,9 +157,6 @@ statement       : expression SEMICOLON {
                 | WHILE expression LCURLY statement_list RCURLY {
                     $$ = new WhileStatementNode($2, $4);
                 }
-                | func_call_expression SEMICOLON {
-                    $$ = $1;
-                }
                 | RETURN expression SEMICOLON {
                     $$ = new ReturnNode($2);
                 }
@@ -174,12 +174,16 @@ actual_args     : expression {
                 }
                 | actual_args COMMA expression {
                     static_cast<ActualArgsNode *>($1)->append($3);
+                    $$ = $1;
                 }
                 | /* epsilon */ {
                     $$ = new ActualArgsNode();
                 }
 
-expression      : NUMBER {
+expression      : func_call_expression {
+                    $$ = $1;
+                }
+                | NUMBER {
                     $$ = new NumberNode(atoi(yytext));
                 }
                 | bool {

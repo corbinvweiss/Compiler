@@ -7,10 +7,15 @@ fn test(a: i32, b: bool) -> i32 {
     }
 }
 
+fn no_args() -> bool {
+    return false;
+}
+
 fn test1() {
     return;
 }
 
 fn main() {
+    print(no_args(), 5, test1());
     test(5, true);
 }
