@@ -151,6 +151,9 @@ statement       : expression SEMICOLON {
                     ELSE LCURLY statement_list RCURLY {
                     $$ = new IfElseStatementNode($2, $4, $8);
                 }
+                | WHILE expression LCURLY statement_list RCURLY {
+                    $$ = new WhileStatementNode($2, $4);
+                }
                 ;
 
 actual_args     : expression {

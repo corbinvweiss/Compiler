@@ -211,6 +211,16 @@ class IfElseStatementNode: public ParseTreeNode {
         void show(int depth) override;
 };
 
+class WhileStatementNode: public ParseTreeNode {
+    private:
+        ParseTreeNode *condition;
+        ParseTreeNode *body;
+    public:
+        WhileStatementNode(ParseTreeNode *condition, ParseTreeNode *body);
+        ~WhileStatementNode();
+        void show(int depth) override;
+};
+
 class ActualArgsNode: public ParseTreeNode {
     private:
         std::vector<ParseTreeNode *> *expressions;

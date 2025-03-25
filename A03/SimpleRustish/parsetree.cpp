@@ -330,6 +330,21 @@ void IfElseStatementNode::show(int depth) {
     else_body->show(depth + 1);
 }
 
+WhileStatementNode::WhileStatementNode(ParseTreeNode* condition, ParseTreeNode* body)
+    : condition(condition), body(body) {}
+
+WhileStatementNode::~WhileStatementNode() {
+    delete condition;
+    delete body;
+}
+
+void WhileStatementNode::show(int depth) {
+    tab(depth);
+    std::cout << "while_statement\n";
+    condition->show(depth + 1);
+    body->show(depth + 1);
+}
+
 
 ActualArgsNode::ActualArgsNode() {
     expressions = new std::vector<ParseTreeNode*>();

@@ -6,4 +6,8 @@ fn test(a: i32, b: bool) -> bool {
 }
 
 fn main() {
+    let mut i: i32;
+    i = 5;
+    i = 7;
+    a = true;
 }

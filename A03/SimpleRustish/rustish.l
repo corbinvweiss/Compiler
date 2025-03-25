@@ -105,7 +105,7 @@ eol    \n
 [A-Za-z_][0-9A-Za-z_]* { /* identifier */
                 return IDENTIFIER;
             }
-[1-9][0-9]* {
+0|[1-9][0-9]* {
                 yylval = std::stoi(yytext);
                 return NUMBER;
             }
