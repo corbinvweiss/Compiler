@@ -110,6 +110,17 @@ class VarDeclNode: public ParseTreeNode {
         void show(int depth) override;
 };
 
+class ArrayDeclNode: public ParseTreeNode {
+    private:
+        ParseTreeNode *identifier;
+        ParseTreeNode *type;
+        ParseTreeNode *length;
+    public:
+        ArrayDeclNode(ParseTreeNode *identifier, ParseTreeNode *type, ParseTreeNode *length);
+        ~ArrayDeclNode();
+        void show(int depth) override;
+};
+
 class TypeNode: public ParseTreeNode {
     protected:
         Type type;
@@ -162,11 +173,21 @@ class StatementNode: public ParseTreeNode {
 
 class AssignmentStatementNode: public ParseTreeNode {
     private:
-        ParseTreeNode *identifier;
-        ParseTreeNode *expression;
+        ParseTreeNode *left;
+        ParseTreeNode *right;
     public:
-        AssignmentStatementNode(ParseTreeNode *identifier, ParseTreeNode *expression);
+        AssignmentStatementNode(ParseTreeNode *left, ParseTreeNode *right);
         ~AssignmentStatementNode();
+        void show(int depth) override;
+};
+
+class ArrayAccessNode: public ParseTreeNode {
+    private:
+        ParseTreeNode *identifier;
+        ParseTreeNode *index;
+    public:
+        ArrayAccessNode(ParseTreeNode *identifier, ParseTreeNode *index);
+        ~ArrayAccessNode();
         void show(int depth) override;
 };
 

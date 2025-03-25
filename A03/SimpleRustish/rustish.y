@@ -92,6 +92,9 @@ params_list     : params_list COMMA var_decl {
 var_decl        : identifier COLON type {
                     $$ = new VarDeclNode($1, $3);
                 }
+                | identifier COLON LSQBRACK type SEMICOLON number RSQBRACK {
+                    $$ = new ArrayDeclNode($1, $4, $6);
+                }
                 ;
 
 type            : I32 {
@@ -141,6 +144,9 @@ statement       : expression SEMICOLON {
                 | identifier ASSIGN expression SEMICOLON {
                     $$ = new AssignmentStatementNode($1, $3);
                 }
+                | array_access ASSIGN expression SEMICOLON {
+                    $$ = new AssignmentStatementNode($1, $3);
+                }
                 | PRINT LPAREN actual_args RPAREN SEMICOLON {
                     $$ = new PrintStatementNode($3);
                 }
@@ -183,8 +189,11 @@ actual_args     : expression {
 expression      : func_call_expression {
                     $$ = $1;
                 }
-                | NUMBER {
-                    $$ = new NumberNode(atoi(yytext));
+                | array_access {
+                    $$ = $1;
+                }
+                | number {
+                    $$ = $1;
                 }
                 | bool {
                     $$ = $1;
@@ -199,6 +208,14 @@ expression      : func_call_expression {
                     $$ = $1;
                 }
                 ;
+
+array_access    : identifier LSQBRACK expression RSQBRACK {
+                    $$ = new ArrayAccessNode($1, $3);
+                }
+
+number          : NUMBER {
+                    $$ = new NumberNode(atoi(yytext));
+                }
 
 binary          : expression PLUS expression {
                     $$ = new BinaryNode(Operator::_PLUS, $1, $3);

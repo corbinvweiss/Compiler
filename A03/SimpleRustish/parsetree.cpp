@@ -166,6 +166,23 @@ void VarDeclNode::show(int depth) {
     type->show(depth+1);
 }
 
+ArrayDeclNode::ArrayDeclNode(ParseTreeNode* identifier, ParseTreeNode* type, ParseTreeNode* length)
+    : identifier(identifier), type(type), length(length) {}
+
+ArrayDeclNode::~ArrayDeclNode() {
+    delete identifier;
+    delete type;
+    delete length;
+}
+
+void ArrayDeclNode::show(int depth) {
+    tab(depth);
+    std::cout << "array_decl\n";
+    identifier->show(depth + 1);
+    type->show(depth + 1);
+    length->show(depth + 1);
+}
+
 TypeNode::TypeNode(Type type)
     :type(type) {}
 TypeNode::~TypeNode() {}
@@ -258,18 +275,34 @@ void StatementNode::show(int depth) {
     }
 }
 
-AssignmentStatementNode::AssignmentStatementNode(ParseTreeNode *identifier, ParseTreeNode *expression)
-    :identifier(identifier), expression(expression) {}
+AssignmentStatementNode::AssignmentStatementNode(ParseTreeNode *left, ParseTreeNode *right)
+    :left(left), right(right) {}
 AssignmentStatementNode::~AssignmentStatementNode() {
-    delete identifier;
-    delete expression;
+    delete left;
+    delete right;
 }
 void AssignmentStatementNode::show(int depth) {
     tab(depth);
     std::cout << "assignment_statement\n";
-    identifier->show(depth+1);
-    expression->show(depth+1);
+    left->show(depth+1);
+    right->show(depth+1);
 }
+
+ArrayAccessNode::ArrayAccessNode(ParseTreeNode* identifier, ParseTreeNode* index)
+    : identifier(identifier), index(index) {}
+
+ArrayAccessNode::~ArrayAccessNode() {
+    delete identifier;
+    delete index;
+}
+
+void ArrayAccessNode::show(int depth) {
+    tab(depth);
+    std::cout << "array_access\n";
+    identifier->show(depth + 1);
+    index->show(depth + 1);
+}
+
 
 PrintStatementNode::PrintStatementNode(ParseTreeNode *arguments)
     :arguments(arguments) {}

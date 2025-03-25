@@ -16,10 +16,28 @@ make clean
 
 The parser can handle up to what is included in test.ri.
 
-## Questions:
-1. At this point the grammar cannot handle a function with no parameters that has a return type such as 
+## Arrays
 ```
-fn test() -> bool {}
+let mut b: i32;
+let mut a: [i32; 5];
+a[2] = 0;
+b = a[2];
 ```
-TODO: add support for this.
+The grammar rule for an array declaration needs to be 
+```
+array_decl  : LET MUT identifier COLON LBRACKET type SEMICOLON number RBRACKET SEMICOLON
+```
+The rule for assignment to an array
+```
+assignment_statement: array_access ASSIGN expression SEMICOLON
+```
+The rule for assignment from array
+```
+assignment_statement: identifier ASSIGN array_access SEMICOLON
+```
+where 
+```
+array_access : identifier LSQBRACK expression RSQBRACK
+```
 
+In this case the assignment from an array is just like any other assignment.
