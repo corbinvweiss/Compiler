@@ -136,9 +136,60 @@ class StatementListNode: public ParseTreeNode {
 };
 
 class StatementNode: public ParseTreeNode {
+    private:
+        ParseTreeNode *contents;
     public:
         StatementNode();
+        StatementNode(ParseTreeNode *contents);
         ~StatementNode();
+        void show(int depth) override;
+};
+
+class AssignmentStatementNode: public ParseTreeNode {
+    private:
+        ParseTreeNode *identifier;
+        ParseTreeNode *expression;
+    public:
+        AssignmentStatementNode(ParseTreeNode *identifier, ParseTreeNode *expression);
+        ~AssignmentStatementNode();
+        void show(int depth) override;
+};
+
+class PrintStatementNode: public ParseTreeNode {
+    private:
+        ParseTreeNode *arguments;
+    public:
+        PrintStatementNode(ParseTreeNode *arguments);
+        ~PrintStatementNode();
+        void show(int depth) override;
+};
+
+class ActualArgsNode: public ParseTreeNode {
+    private:
+        std::vector<ParseTreeNode *> *expressions;
+    public:
+        ActualArgsNode();
+        ActualArgsNode(ParseTreeNode *expression);
+        ~ActualArgsNode();
+        void append(ParseTreeNode *expression);
+        void show(int depth) override;
+};
+
+class NumberNode: public ParseTreeNode {
+    protected:
+        int value;
+    public:
+        NumberNode(int value);
+        ~NumberNode();
+        void show(int depth) override;
+};
+
+class BoolNode: public ParseTreeNode {
+    protected:
+        bool value;
+    public:
+        BoolNode(bool value);
+        ~BoolNode();
         void show(int depth) override;
 };
 
@@ -149,4 +200,4 @@ class IdentifierNode: public ParseTreeNode {
         IdentifierNode(std::string value);
         ~IdentifierNode();
         void show(int depth) override;
-};
+};;

@@ -131,6 +131,33 @@ statement_list  : statement_list statement {
 statement       : SEMICOLON {
                     $$ = new StatementNode();
                 }
+                | identifier ASSIGN expression SEMICOLON {
+                    $$ = new AssignmentStatementNode($1, $3);
+                }
+                | PRINT LPAREN actual_args RPAREN SEMICOLON {
+                    $$ = new PrintStatementNode($3);
+                }
+                ;
+
+actual_args     : expression {
+                    $$ = new ActualArgsNode($1);
+                }
+                | actual_args COMMA expression {
+                    static_cast<ActualArgsNode *>($1)->append($3);
+                }
+                | /* epsilon */ {
+                    $$ = new ActualArgsNode();
+                }
+
+expression      : NUMBER {
+                    $$ = new NumberNode(atoi(yytext));
+                }
+                | TRUE {
+                    $$ = new BoolNode(true);
+                }
+                | FALSE {
+                    $$ = new BoolNode(false);
+                }
                 ;
 
 identifier      : IDENTIFIER {

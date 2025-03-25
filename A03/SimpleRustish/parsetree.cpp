@@ -10,6 +10,7 @@ https://www.cs.southern.edu/halterman/Courses/Winter2025/415/Assignments/parser.
 #include <iostream>
 #include "parsetree.h"
 
+
 // print spaces to indent nodes in the tree
 void tab(int depth) {
     for(int i=0; i<depth; i++) {
@@ -226,10 +227,92 @@ void StatementListNode::show(int depth) {
 }
 
 StatementNode::StatementNode() {}
+StatementNode::StatementNode(ParseTreeNode *contents)
+    :contents(contents) {}
 StatementNode::~StatementNode() {}
 void StatementNode::show(int depth) {
     tab(depth);
     std::cout << "statement\n";
+    if(contents) {
+        contents->show(depth+1);
+    }
+    else {
+        tab(depth+1);
+        std::cout << "(none)\n";
+    }
+}
+
+AssignmentStatementNode::AssignmentStatementNode(ParseTreeNode *identifier, ParseTreeNode *expression)
+    :identifier(identifier), expression(expression) {}
+AssignmentStatementNode::~AssignmentStatementNode() {
+    delete identifier;
+    delete expression;
+}
+void AssignmentStatementNode::show(int depth) {
+    tab(depth);
+    std::cout << "assignment_statement\n";
+    identifier->show(depth+1);
+    expression->show(depth+1);
+}
+
+PrintStatementNode::PrintStatementNode(ParseTreeNode *arguments)
+    :arguments(arguments) {}
+PrintStatementNode::~PrintStatementNode() {
+    delete arguments;
+}
+void PrintStatementNode::show(int depth) {
+    tab(depth);
+    std::cout << "print_statement\n";
+    arguments->show(depth+1);
+}
+
+ActualArgsNode::ActualArgsNode() {
+    expressions = new std::vector<ParseTreeNode*>();
+}
+
+ActualArgsNode::ActualArgsNode(ParseTreeNode* arg) {
+    expressions = new std::vector<ParseTreeNode*>();
+    expressions->push_back(arg);
+}
+
+ActualArgsNode::~ActualArgsNode() {
+    for (ParseTreeNode* arg : *expressions) {
+        delete arg;
+    }
+    delete expressions;
+}
+
+void ActualArgsNode::append(ParseTreeNode* arg) {
+    expressions->push_back(arg);
+}
+
+void ActualArgsNode::show(int depth) {
+    tab(depth);
+    std::cout << "actual_args\n";
+    if (!expressions->empty()) {
+        for (ParseTreeNode* arg : *expressions) {
+            arg->show(depth + 1);
+        }
+    } else {
+        tab(depth + 1);
+        std::cout << "(none)\n";
+    }
+}
+
+NumberNode::NumberNode(int value)
+    :value(value) {}
+NumberNode::~NumberNode() {}
+void NumberNode::show(int depth) {
+    tab(depth);
+    std::cout << "number: " << value << '\n';
+}
+
+BoolNode::BoolNode(bool value)
+    :value(value) {}
+BoolNode::~BoolNode() {}
+void BoolNode::show(int depth) {
+    tab(depth);
+    std::cout << "bool: " << (value ? "true" : "false") << '\n';
 }
 
 IdentifierNode::IdentifierNode(std::string id):
