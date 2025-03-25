@@ -394,6 +394,26 @@ void CallNode::show(int depth) {
     arguments->show(depth + 1);
 }
 
+ReturnNode::ReturnNode() : expression(nullptr) {}
+
+ReturnNode::ReturnNode(ParseTreeNode *expression) : expression(expression) {}
+
+ReturnNode::~ReturnNode() {
+    delete expression;
+}
+
+void ReturnNode::show(int depth) {
+    tab(depth);
+    std::cout << "return_statement" << std::endl;
+    if (expression) {
+        expression->show(depth + 1);
+    }
+    else {
+        tab(depth+1);
+        std::cout << "(none)\n";
+    }
+}
+
 UnaryNode::UnaryNode(Operator op, ParseTreeNode* expression)
     : op(op), expression(expression) {}
 UnaryNode::~UnaryNode() {

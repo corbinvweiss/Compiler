@@ -157,6 +157,12 @@ statement       : expression SEMICOLON {
                 | func_call_expression SEMICOLON {
                     $$ = $1;
                 }
+                | RETURN expression SEMICOLON {
+                    $$ = new ReturnNode($2);
+                }
+                | RETURN SEMICOLON {
+                    $$ = new ReturnNode();
+                }
                 ;
 
 func_call_expression : identifier LPAREN actual_args RPAREN {

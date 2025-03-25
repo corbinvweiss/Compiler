@@ -242,6 +242,16 @@ class CallNode: public ParseTreeNode {
         void show(int depth) override;
 };
 
+class ReturnNode: public ParseTreeNode {
+    private:
+        ParseTreeNode *expression; // Can be nullptr if no expression is provided
+    public:
+        ReturnNode();
+        ReturnNode(ParseTreeNode *expression);
+        ~ReturnNode();
+        void show(int depth) override;
+};
+
 class UnaryNode: public ParseTreeNode {
     private:
         Operator op;

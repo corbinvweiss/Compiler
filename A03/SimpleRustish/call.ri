@@ -1,7 +1,14 @@
-fn test(a: i32, b: bool) {
+fn test(a: i32, b: bool) -> i32 {
     if b {
-        print(a);
+        return a;
     }
+    else {
+        return 0;
+    }
+}
+
+fn test1() {
+    return;
 }
 
 fn main() {
