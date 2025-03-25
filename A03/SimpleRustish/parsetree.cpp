@@ -10,6 +10,27 @@ https://www.cs.southern.edu/halterman/Courses/Winter2025/415/Assignments/parser.
 #include <iostream>
 #include "parsetree.h"
 
+// Convert Operator enum to string
+std::string operatorToString(Operator op) {
+    switch (op) {
+        case Operator::_PLUS: return "+";
+        case Operator::_MINUS: return "-";
+        case Operator::_TIMES: return "*";
+        case Operator::_DIVIDE: return "/";
+        case Operator::_MODULUS: return "%";
+        case Operator::_AND: return "&&";
+        case Operator::_OR: return "||";
+        case Operator::_EQ: return "==";
+        case Operator::_NE: return "!=";
+        case Operator::_LT: return "<";
+        case Operator::_LE: return "<=";
+        case Operator::_GT: return ">";
+        case Operator::_GE: return ">=";
+        case Operator::_NOT: return "!";
+        default: return "Unknown Operator";
+    }
+}
+
 
 // print spaces to indent nodes in the tree
 void tab(int depth) {
@@ -255,21 +276,27 @@ void AssignmentStatementNode::show(int depth) {
     expression->show(depth+1);
 }
 
-PrintStatementNode::PrintStatementNode(ParseTreeNode *arguments, bool newline)
-    :arguments(arguments), newline(newline) {}
+PrintStatementNode::PrintStatementNode(ParseTreeNode *arguments)
+    :arguments(arguments) {}
 PrintStatementNode::~PrintStatementNode() {
     delete arguments;
 }
 void PrintStatementNode::show(int depth) {
     tab(depth);
-    if (newline) {
-        std::cout << "println_statement\n";
-    } else {
-        std::cout << "print_statement\n";
-    }
+    std::cout << "print_statement\n";
     arguments->show(depth+1);
 }
 
+PrintlnStatementNode::PrintlnStatementNode(ParseTreeNode *arguments)
+    :arguments(arguments) {}
+PrintlnStatementNode::~PrintlnStatementNode() {
+    delete arguments;
+}
+void PrintlnStatementNode::show(int depth) {
+    tab(depth);
+    std::cout << "println_statement\n";
+    arguments->show(depth+1);
+}
 
 
 ActualArgsNode::ActualArgsNode() {
@@ -303,6 +330,17 @@ void ActualArgsNode::show(int depth) {
         tab(depth + 1);
         std::cout << "(none)\n";
     }
+}
+
+UnaryNode::UnaryNode(Operator op, ParseTreeNode* expression)
+    : op(op), expression(expression) {}
+UnaryNode::~UnaryNode() {
+    delete expression;
+}
+void UnaryNode::show(int depth) {
+    tab(depth);
+    std::cout << "unary: (" << operatorToString(op) << ")\n";
+    expression->show(depth + 1);
 }
 
 NumberNode::NumberNode(int value)

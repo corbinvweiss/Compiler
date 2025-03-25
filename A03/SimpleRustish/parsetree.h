@@ -19,6 +19,23 @@ enum Type {
     ARRAY_BOOL
 };
 
+enum Operator {
+    _PLUS,
+    _MINUS,
+    _TIMES,
+    _DIVIDE,
+    _MODULUS,
+    _AND,
+    _OR,
+    _EQ,
+    _NE,
+    _LT,
+    _LE,
+    _GT,
+    _GE,
+    _NOT
+};
+
 
 class ParseTreeNode {
     public:
@@ -158,10 +175,18 @@ class AssignmentStatementNode: public ParseTreeNode {
 class PrintStatementNode: public ParseTreeNode {
     private:
         ParseTreeNode *arguments;
-        bool newline;
     public:
-        PrintStatementNode(ParseTreeNode *arguments, bool newline);
+        PrintStatementNode(ParseTreeNode *arguments);
         ~PrintStatementNode();
+        void show(int depth) override;
+};
+
+class PrintlnStatementNode: public ParseTreeNode {
+    private:
+        ParseTreeNode *arguments;
+    public:
+        PrintlnStatementNode(ParseTreeNode *arguments);
+        ~PrintlnStatementNode();
         void show(int depth) override;
 };
 
@@ -173,6 +198,16 @@ class ActualArgsNode: public ParseTreeNode {
         ActualArgsNode(ParseTreeNode *expression);
         ~ActualArgsNode();
         void append(ParseTreeNode *expression);
+        void show(int depth) override;
+};
+
+class UnaryNode: public ParseTreeNode {
+    private:
+        Operator op;
+        ParseTreeNode *expression;
+    public:
+        UnaryNode(Operator op, ParseTreeNode *expression);
+        ~UnaryNode();
         void show(int depth) override;
 };
 

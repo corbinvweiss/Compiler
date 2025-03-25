@@ -132,10 +132,10 @@ statement       : expression SEMICOLON {
                     $$ = new AssignmentStatementNode($1, $3);
                 }
                 | PRINT LPAREN actual_args RPAREN SEMICOLON {
-                    $$ = new PrintStatementNode($3, false);
+                    $$ = new PrintStatementNode($3);
                 }
                 | PRINTLN LPAREN actual_args RPAREN SEMICOLON {
-                    $$ = new PrintStatementNode($3, true);
+                    $$ = new PrintlnStatementNode($3);
                 }
                 ;
 
@@ -152,13 +152,34 @@ actual_args     : expression {
 expression      : NUMBER {
                     $$ = new NumberNode(atoi(yytext));
                 }
-                | TRUE {
+                | bool {
+                    $$ = $1;
+                }
+                | identifier {
+                    $$ = $1;
+                }
+                | unary {
+                    $$ = $1;
+                }
+                ;
+
+unary           : MINUS expression {
+                    $$ = new UnaryNode(Operator::_MINUS, $2);
+                }
+                | PLUS expression {
+                    $$ = new UnaryNode(Operator::_PLUS, $2);
+                }
+                | NOT expression {
+                    $$ = new UnaryNode(Operator::_NOT, $2);
+                }
+                ;
+
+bool            : TRUE {
                     $$ = new BoolNode(true);
                 }
                 | FALSE {
                     $$ = new BoolNode(false);
                 }
-                ;
 
 identifier      : IDENTIFIER {
                     $$ = new IdentifierNode(yytext);
