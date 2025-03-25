@@ -298,6 +298,38 @@ void PrintlnStatementNode::show(int depth) {
     arguments->show(depth+1);
 }
 
+IfStatementNode::IfStatementNode(ParseTreeNode *condition, ParseTreeNode *body)
+    : condition(condition), body(body) {}
+
+IfStatementNode::~IfStatementNode() {
+    delete condition;
+    delete body;
+}
+
+void IfStatementNode::show(int depth) {
+    tab(depth);
+    std::cout << "if_statement\n";
+    condition->show(depth+1);
+    body->show(depth+1);
+}
+
+IfElseStatementNode::IfElseStatementNode(ParseTreeNode* condition, ParseTreeNode* if_body, ParseTreeNode* else_body)
+    : condition(condition), if_body(if_body), else_body(else_body) {}
+
+IfElseStatementNode::~IfElseStatementNode() {
+    delete condition;
+    delete if_body;
+    delete else_body;
+}
+
+void IfElseStatementNode::show(int depth) {
+    tab(depth);
+    std::cout << "if_else_statement\n";
+    condition->show(depth + 1);
+    if_body->show(depth + 1);
+    else_body->show(depth + 1);
+}
+
 
 ActualArgsNode::ActualArgsNode() {
     expressions = new std::vector<ParseTreeNode*>();

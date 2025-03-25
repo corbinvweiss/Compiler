@@ -1,0 +1,11 @@
+fn main() {
+    if 5 < 7 {
+        print(a + b, c, 7);
+    }
+    if a > 98 {
+        a = 5;
+    }
+    else {
+        a = 100;
+    }
+}

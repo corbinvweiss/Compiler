@@ -144,6 +144,13 @@ statement       : expression SEMICOLON {
                 | PRINTLN LPAREN actual_args RPAREN SEMICOLON {
                     $$ = new PrintlnStatementNode($3);
                 }
+                | IF expression LCURLY statement_list RCURLY {
+                    $$ = new IfStatementNode($2, $4);
+                }
+                | IF expression LCURLY statement_list RCURLY 
+                    ELSE LCURLY statement_list RCURLY {
+                    $$ = new IfElseStatementNode($2, $4, $8);
+                }
                 ;
 
 actual_args     : expression {

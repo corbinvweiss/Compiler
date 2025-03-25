@@ -190,6 +190,27 @@ class PrintlnStatementNode: public ParseTreeNode {
         void show(int depth) override;
 };
 
+class IfStatementNode: public ParseTreeNode {
+    private:
+        ParseTreeNode *condition;
+        ParseTreeNode *body;
+    public:
+        IfStatementNode(ParseTreeNode *condition, ParseTreeNode *body);
+        ~IfStatementNode();
+        void show(int depth) override;
+};
+
+class IfElseStatementNode: public ParseTreeNode {
+    private:
+        ParseTreeNode *condition;
+        ParseTreeNode *if_body;
+        ParseTreeNode *else_body;
+    public:
+        IfElseStatementNode(ParseTreeNode *condition, ParseTreeNode *if_body, ParseTreeNode *else_body);
+        ~IfElseStatementNode();
+        void show(int depth) override;
+};
+
 class ActualArgsNode: public ParseTreeNode {
     private:
         std::vector<ParseTreeNode *> *expressions;
