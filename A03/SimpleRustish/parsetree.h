@@ -211,6 +211,17 @@ class UnaryNode: public ParseTreeNode {
         void show(int depth) override;
 };
 
+class BinaryNode: public ParseTreeNode {
+    private:
+        Operator op;
+        ParseTreeNode *left;
+        ParseTreeNode *right;
+    public:
+        BinaryNode(Operator op, ParseTreeNode *left, ParseTreeNode *right);
+        ~BinaryNode();
+        void show(int depth) override;
+};
+
 class NumberNode: public ParseTreeNode {
     protected:
         int value;

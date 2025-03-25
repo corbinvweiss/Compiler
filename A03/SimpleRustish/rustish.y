@@ -23,10 +23,17 @@ extern char* yytext;
     PRINTLN ARROW COLON FN I32 BOOL LET MUT FALSE TRUE LPAREN RPAREN 
     PLUS MINUS TIMES DIVIDE MODULUS AND OR NOT IF ELSE WHILE RETURN
     LSQBRACK RSQBRACK NE EQ GT LT LE GE
-/* Grammar rules */
+
+%left OR                   /* Lowest precedence */
+%left AND
+%left EQ NE                 
+%left GT LT LE GE
+%left PLUS MINUS MODULUS    
+%left TIMES DIVIDE          
+%left NOT                  /* Higher precedence */
 %%
 
-/* This program will accept a program made up of empty functions */
+/* Grammar rules */
 
 input           : program {
                     auto node = $1;
@@ -160,6 +167,50 @@ expression      : NUMBER {
                 }
                 | unary {
                     $$ = $1;
+                }
+                | binary {
+                    $$ = $1;
+                }
+                ;
+
+binary          : expression PLUS expression {
+                    $$ = new BinaryNode(Operator::_PLUS, $1, $3);
+                }
+                | expression MINUS expression {
+                    $$ = new BinaryNode(Operator::_MINUS, $1, $3);
+                }
+                | expression TIMES expression {
+                    $$ = new BinaryNode(Operator::_TIMES, $1, $3);
+                }
+                | expression DIVIDE expression {
+                    $$ = new BinaryNode(Operator::_DIVIDE, $1, $3);
+                }
+                | expression MODULUS expression {
+                    $$ = new BinaryNode(Operator::_MODULUS, $1, $3);
+                }
+                | expression AND expression {
+                    $$ = new BinaryNode(Operator::_AND, $1, $3);
+                }
+                | expression OR expression {
+                    $$ = new BinaryNode(Operator::_OR, $1, $3);
+                }
+                | expression EQ expression {
+                    $$ = new BinaryNode(Operator::_EQ, $1, $3);
+                }
+                | expression NE expression {
+                    $$ = new BinaryNode(Operator::_NE, $1, $3);
+                }
+                | expression LE expression {
+                    $$ = new BinaryNode(Operator::_LE, $1, $3);
+                }
+                | expression GE expression {
+                    $$ = new BinaryNode(Operator::_GE, $1, $3);
+                }
+                | expression GT expression {
+                    $$ = new BinaryNode(Operator::_GT, $1, $3);
+                }
+                | expression LT expression {
+                    $$ = new BinaryNode(Operator::_LT, $1, $3);
                 }
                 ;
 

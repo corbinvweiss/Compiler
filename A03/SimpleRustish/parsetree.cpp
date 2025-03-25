@@ -343,6 +343,21 @@ void UnaryNode::show(int depth) {
     expression->show(depth + 1);
 }
 
+BinaryNode::BinaryNode(Operator op, ParseTreeNode* left, ParseTreeNode* right)
+    : op(op), left(left), right(right) {}
+
+BinaryNode::~BinaryNode() {
+    delete left;
+    delete right;
+}
+
+void BinaryNode::show(int depth) {
+    tab(depth);
+    std::cout << "binary: (" << operatorToString(op) << ")\n";
+    left->show(depth + 1);
+    right->show(depth + 1);
+}
+
 NumberNode::NumberNode(int value)
     :value(value) {}
 NumberNode::~NumberNode() {}
