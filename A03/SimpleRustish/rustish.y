@@ -120,16 +120,13 @@ statement_list  : statement_list statement {
                     static_cast<StatementListNode*>($1)->append($2);
                     $$ = $1;
                 }
-                | statement {
-                    $$ = new StatementListNode($1);
-                }
                 | /* epsilon */ {
                     $$ = new StatementListNode();
                 }
                 ;
 
-statement       : SEMICOLON {
-                    $$ = new StatementNode();
+statement       : expression SEMICOLON {
+                    $$ = new StatementNode($1);
                 }
                 | identifier ASSIGN expression SEMICOLON {
                     $$ = new AssignmentStatementNode($1, $3);
