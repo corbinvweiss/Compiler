@@ -132,7 +132,10 @@ statement       : expression SEMICOLON {
                     $$ = new AssignmentStatementNode($1, $3);
                 }
                 | PRINT LPAREN actual_args RPAREN SEMICOLON {
-                    $$ = new PrintStatementNode($3);
+                    $$ = new PrintStatementNode($3, false);
+                }
+                | PRINTLN LPAREN actual_args RPAREN SEMICOLON {
+                    $$ = new PrintStatementNode($3, true);
                 }
                 ;
 

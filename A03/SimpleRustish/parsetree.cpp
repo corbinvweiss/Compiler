@@ -255,16 +255,22 @@ void AssignmentStatementNode::show(int depth) {
     expression->show(depth+1);
 }
 
-PrintStatementNode::PrintStatementNode(ParseTreeNode *arguments)
-    :arguments(arguments) {}
+PrintStatementNode::PrintStatementNode(ParseTreeNode *arguments, bool newline)
+    :arguments(arguments), newline(newline) {}
 PrintStatementNode::~PrintStatementNode() {
     delete arguments;
 }
 void PrintStatementNode::show(int depth) {
     tab(depth);
-    std::cout << "print_statement\n";
+    if (newline) {
+        std::cout << "println_statement\n";
+    } else {
+        std::cout << "print_statement\n";
+    }
     arguments->show(depth+1);
 }
+
+
 
 ActualArgsNode::ActualArgsNode() {
     expressions = new std::vector<ParseTreeNode*>();

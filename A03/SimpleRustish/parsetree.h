@@ -158,8 +158,9 @@ class AssignmentStatementNode: public ParseTreeNode {
 class PrintStatementNode: public ParseTreeNode {
     private:
         ParseTreeNode *arguments;
+        bool newline;
     public:
-        PrintStatementNode(ParseTreeNode *arguments);
+        PrintStatementNode(ParseTreeNode *arguments, bool newline);
         ~PrintStatementNode();
         void show(int depth) override;
 };
