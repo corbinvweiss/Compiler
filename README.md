@@ -7,14 +7,14 @@ The code for the parsing assignment is in A03/SimpleRustish. The intent is to st
 To run the parser run the following commands in A03/SimpleRustish:
 ```
 make all
-./rustish test.ri
+./rustish sample/tst.ri
 ```
 When you are done run
 ```
 make clean
 ```
 
-The parser can handle up to what is included in test.ri.
+The parser can handle all of the code included in `sample/`
 
 ## Arrays
 ```
