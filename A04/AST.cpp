@@ -33,5 +33,48 @@ ProgramNode::~ProgramNode() {
     delete main_def;
 }
 
-MainDefNode::MainDefNode() {}
-MainDefNode::~MainDefNode() {}
+MainDefNode::MainDefNode(ASTNode* func_body) 
+    :func_body(func_body) {}
+MainDefNode::~MainDefNode() {
+    delete func_body;
+}
+
+FuncBodyNode::FuncBodyNode(ASTNode* local_decl_list)
+    : local_decl_list(local_decl_list) {}
+FuncBodyNode::~FuncBodyNode() {
+    delete local_decl_list;
+}
+
+LocalDeclListNode::LocalDeclListNode() {
+    decl_list = new std::vector<ASTNode*>();
+}
+LocalDeclListNode::LocalDeclListNode(ASTNode* decl) {
+    decl_list = new std::vector<ASTNode*>();
+    decl_list->push_back(decl);
+}
+void LocalDeclListNode::append(ASTNode* decl) {
+    decl_list->push_back(decl);
+}
+LocalDeclListNode::~LocalDeclListNode() {
+    for (ASTNode *decl : *decl_list) {
+        delete decl;
+    }
+}
+
+VarDeclNode::VarDeclNode(ASTNode* id, ASTNode* t) 
+    : identifier(id), type(t) {
+        // here is where I should put the identifier and its type in the symbol table
+    }
+VarDeclNode::~VarDeclNode() {
+    delete identifier;
+    delete type;
+}
+
+IdentifierNode::IdentifierNode(std::string lexeme)
+    : lexeme(lexeme) {}
+IdentifierNode::~IdentifierNode() {}
+
+TypeNode::TypeNode(Type t) {
+    set_type(t);
+}
+TypeNode::~TypeNode() {}

@@ -25,6 +25,9 @@ class ASTNode {
     public:
         ASTNode();
         virtual ~ASTNode();
+        virtual void set_type(Type t) {
+            _type = t;
+        }
         virtual Type get_type() {
             return _type;
         }
@@ -40,7 +43,49 @@ class ProgramNode : public ASTNode {
 
 class MainDefNode: public ASTNode {
     private:
+        ASTNode* func_body;
     public:
-        MainDefNode();
+        MainDefNode(ASTNode* func_body);
         ~MainDefNode();
+};
+
+class FuncBodyNode: public ASTNode {
+    private:
+        ASTNode* local_decl_list;
+    public:
+        FuncBodyNode(ASTNode* local_decl_list);
+        ~FuncBodyNode();
+};
+
+class LocalDeclListNode: public ASTNode {
+    private:
+        std::vector<ASTNode*> * decl_list;
+    public:
+        LocalDeclListNode();
+        LocalDeclListNode(ASTNode* decl);
+        void append(ASTNode* decl);
+        ~LocalDeclListNode();
+};
+
+class VarDeclNode: public ASTNode {
+    private:
+        ASTNode* identifier;
+        ASTNode* type;
+    public:
+        VarDeclNode(ASTNode* id, ASTNode* t);
+        ~VarDeclNode();
+};
+
+class IdentifierNode: public ASTNode {
+    private:
+        std::string lexeme;
+    public:
+        IdentifierNode(std::string id);
+        ~IdentifierNode();
+};
+
+class TypeNode: public ASTNode {
+    public:
+        TypeNode(Type t);
+        ~TypeNode();
 };

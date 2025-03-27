@@ -47,10 +47,41 @@ program         : main_def {
                 }
                 ;
 
-main_def        : FN MAIN LPAREN RPAREN LCURLY RCURLY {
-                    $$ = new MainDefNode();
+main_def        : FN MAIN LPAREN RPAREN LCURLY func_body RCURLY {
+                    $$ = new MainDefNode($6);
                 }
                 ;
+
+func_body       : local_decl_list {
+                    $$ = new FuncBodyNode($1);
+                }
+
+local_decl_list : local_decl_list LET MUT var_decl SEMICOLON {
+                    static_cast<LocalDeclListNode*>($1)->append($4);
+                    $$ = $1;
+                }
+                | /* epsilon */ {
+                    // Create a new empty local declaration list
+                    $$ = new LocalDeclListNode();
+                }
+                ;
+
+var_decl        : identifier COLON type {
+                    $$ = new VarDeclNode($1, $3);
+                }
+                ;
+
+identifier      : IDENTIFIER {
+                    $$ = new IdentifierNode(yytext);
+                }
+                ;
+
+type            : I32 {
+                    $$ = new TypeNode(Type::i32);
+                }
+                | BOOL {
+                    $$ = new TypeNode(Type::Bool);
+                }
 
 %%
 

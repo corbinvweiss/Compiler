@@ -24,6 +24,15 @@ Support the following:
 ```
 fn main() {
     let mut a: i32;
+    let mut a: i32;
+}
+------------------
+error
+```
+The work up to the following:
+```
+fn main() {
+    let mut a: i32;
     a = 5;
     a = true;   
 }
