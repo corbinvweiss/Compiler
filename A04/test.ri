@@ -1,3 +1,6 @@
 fn main() {
     let mut a: i32;
+    let mut b: i32;
+    let mut a: i32;
+    let mut c: bool;
 }

@@ -8,16 +8,7 @@ Define the classes used in the Abstract Syntax Tree for Rustish
 #pragma once
 #include <vector>
 #include <string>
-
-enum Type {
-    none,
-    i32,
-    Bool,
-    array_i32,
-    array_bool,
-};
-
-std::string typeToString(Type t);
+#include "SymbolTable.h"
 
 class ASTNode {
     private:
@@ -33,53 +24,11 @@ class ASTNode {
         }
 };
 
-class ProgramNode : public ASTNode {
-    private:
-        ASTNode* main_def;
-    public:
-        ProgramNode(ASTNode *main_def);
-        ~ProgramNode();
-};
-
-class MainDefNode: public ASTNode {
-    private:
-        ASTNode* func_body;
-    public:
-        MainDefNode(ASTNode* func_body);
-        ~MainDefNode();
-};
-
-class FuncBodyNode: public ASTNode {
-    private:
-        ASTNode* local_decl_list;
-    public:
-        FuncBodyNode(ASTNode* local_decl_list);
-        ~FuncBodyNode();
-};
-
-class LocalDeclListNode: public ASTNode {
-    private:
-        std::vector<ASTNode*> * decl_list;
-    public:
-        LocalDeclListNode();
-        LocalDeclListNode(ASTNode* decl);
-        void append(ASTNode* decl);
-        ~LocalDeclListNode();
-};
-
-class VarDeclNode: public ASTNode {
-    private:
-        ASTNode* identifier;
-        ASTNode* type;
-    public:
-        VarDeclNode(ASTNode* id, ASTNode* t);
-        ~VarDeclNode();
-};
-
 class IdentifierNode: public ASTNode {
     private:
         std::string lexeme;
     public:
+        std::string get_lexeme();
         IdentifierNode(std::string id);
         ~IdentifierNode();
 };
@@ -89,3 +38,46 @@ class TypeNode: public ASTNode {
         TypeNode(Type t);
         ~TypeNode();
 };
+
+class VarDeclNode: public ASTNode {
+    private:
+        IdentifierNode* identifier;
+        TypeNode* type;
+    public:
+        VarDeclNode(ASTNode* id, ASTNode* t);
+        ~VarDeclNode();
+        void UpdateSymbolTable(SymbolTable* symbol_table);
+};
+
+class LocalDeclListNode: public ASTNode {
+    private:
+        std::vector<VarDeclNode*> * decl_list;
+    public:
+        LocalDeclListNode();
+        LocalDeclListNode(ASTNode* decl);
+        void UpdateSymbolTable(SymbolTable* symbol_table);
+        void append(ASTNode* decl);
+        ~LocalDeclListNode();
+};
+
+class MainDefNode: public ASTNode {
+    private:
+        LocalDeclListNode* local_decl_list;
+        SymbolTable* symbol_table;
+    public:
+        MainDefNode(ASTNode* local_decl_list);
+        ~MainDefNode();
+};
+
+class ProgramNode : public ASTNode {
+    private:
+        MainDefNode* main_def;
+        SymbolTable* symbol_table;
+    public:
+        ProgramNode(ASTNode *main);
+        ~ProgramNode();
+};
+
+
+
+

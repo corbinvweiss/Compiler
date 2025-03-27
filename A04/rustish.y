@@ -37,7 +37,6 @@ extern char* yytext;
 
 input           : program {
                     auto node = $1;
-                    std::cout << typeToString(node->get_type()) << '\n';
                     delete node;
                 }
                 ;
@@ -47,14 +46,11 @@ program         : main_def {
                 }
                 ;
 
-main_def        : FN MAIN LPAREN RPAREN LCURLY func_body RCURLY {
+main_def        : FN MAIN LPAREN RPAREN LCURLY local_decl_list RCURLY {
                     $$ = new MainDefNode($6);
                 }
                 ;
 
-func_body       : local_decl_list {
-                    $$ = new FuncBodyNode($1);
-                }
 
 local_decl_list : local_decl_list LET MUT var_decl SEMICOLON {
                     static_cast<LocalDeclListNode*>($1)->append($4);
