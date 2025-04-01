@@ -1,0 +1,8 @@
+fn main() {
+    // this is a comment. 
+    let mut a: i32;
+    /*
+    this is a multiline comment!
+    let mut b: bool;
+    */
+}

@@ -1,0 +1,9 @@
+fn main() {
+    println(2 + 2);
+    println(5 * 10);
+    println(2 + 5 * 10 - 11);
+    println();
+    println();
+    println();
+    println(2 + -2);
+}

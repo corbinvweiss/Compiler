@@ -1,0 +1,12 @@
+fn multiargs(x: i32, y: i32, z: i32) -> i32 {
+    print(x);
+    print(y);
+    print(z);
+}
+
+fn main() {
+    multiargs(1, 2, 3);
+    println();
+    multiargs(10, 20, 30);
+    println();
+}
