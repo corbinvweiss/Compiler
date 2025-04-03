@@ -9,13 +9,18 @@ Define the classes used in the Abstract Syntax Tree for Rustish
 #include <vector>
 #include <string>
 #include "SymbolTable.h"
+#include <iostream>
 
 class ASTNode {
     private:
         Type _type = Type::none;
     public:
-        ASTNode();
-        virtual ~ASTNode();
+        int lineno;
+        ASTNode(int line) :lineno(line) {};
+        virtual ~ASTNode() = default;
+
+        virtual void UpdateSymbolTable(SymbolTable* ST) {std::cout << "base class UpdateSymbolTable\n"; };
+
         virtual void set_type(Type t) {
             _type = t;
         }
@@ -24,18 +29,27 @@ class ASTNode {
         }
 };
 
+class NumberNode: public ASTNode {
+    private:
+        int value;
+    public:
+        int get_value();
+        NumberNode(int value, int line);
+        ~NumberNode();
+};
+
 class IdentifierNode: public ASTNode {
     private:
         std::string lexeme;
     public:
         std::string get_lexeme();
-        IdentifierNode(std::string id);
+        IdentifierNode(std::string id, int line);
         ~IdentifierNode();
 };
 
 class TypeNode: public ASTNode {
     public:
-        TypeNode(Type t);
+        TypeNode(Type t, int line);
         ~TypeNode();
 };
 
@@ -44,18 +58,38 @@ class VarDeclNode: public ASTNode {
         IdentifierNode* identifier;
         TypeNode* type;
     public:
-        VarDeclNode(ASTNode* id, ASTNode* t);
+        VarDeclNode(ASTNode* id, ASTNode* t, int line);
         ~VarDeclNode();
-        void UpdateSymbolTable(SymbolTable* symbol_table);
+        void UpdateSymbolTable(SymbolTable* symbol_table) override;
+};
+
+class AssignmentStatementNode: public ASTNode {
+    private:
+        IdentifierNode* identifier;
+        NumberNode* number;
+    public:
+        AssignmentStatementNode(ASTNode* identifier, ASTNode* number, int line);
+        ~AssignmentStatementNode();
+        void UpdateSymbolTable(SymbolTable* ST) override;
+};
+
+class StatementListNode: public ASTNode {
+    private:
+        std::vector<ASTNode*> * stmt_list;
+    public:
+        StatementListNode(int line);
+        ~StatementListNode();
+        void UpdateSymbolTable(SymbolTable* symbol_table) override;
+        void append(ASTNode* stmt);
 };
 
 class LocalDeclListNode: public ASTNode {
     private:
         std::vector<VarDeclNode*> * decl_list;
     public:
-        LocalDeclListNode();
-        LocalDeclListNode(ASTNode* decl);
-        void UpdateSymbolTable(SymbolTable* symbol_table);
+        LocalDeclListNode(int lineno);
+        LocalDeclListNode(ASTNode* decl, int line);
+        void UpdateSymbolTable(SymbolTable* symbol_table) override;
         void append(ASTNode* decl);
         ~LocalDeclListNode();
 };
@@ -63,9 +97,10 @@ class LocalDeclListNode: public ASTNode {
 class MainDefNode: public ASTNode {
     private:
         LocalDeclListNode* local_decl_list;
+        StatementListNode* stmt_list;
         SymbolTable* symbol_table;
     public:
-        MainDefNode(ASTNode* local_decl_list);
+        MainDefNode(ASTNode* local_decl_list, ASTNode* stmt_list, int line);
         ~MainDefNode();
 };
 

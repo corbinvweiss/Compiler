@@ -16,6 +16,7 @@ void yyerror(const char *s);
 
 extern FILE *yyin;
 extern char* yytext;
+extern int yylineno;
 %}
 
 /* BISON Declarations */
@@ -46,8 +47,8 @@ program         : main_def {
                 }
                 ;
 
-main_def        : FN MAIN LPAREN RPAREN LCURLY local_decl_list RCURLY {
-                    $$ = new MainDefNode($6);
+main_def        : FN MAIN LPAREN RPAREN LCURLY local_decl_list statement_list RCURLY {
+                    $$ = new MainDefNode($6, $7, yylineno);
                 }
                 ;
 
@@ -58,25 +59,49 @@ local_decl_list : local_decl_list LET MUT var_decl SEMICOLON {
                 }
                 | /* epsilon */ {
                     // Create a new empty local declaration list
-                    $$ = new LocalDeclListNode();
+                    $$ = new LocalDeclListNode(yylineno);
                 }
                 ;
 
 var_decl        : identifier COLON type {
-                    $$ = new VarDeclNode($1, $3);
+                    $$ = new VarDeclNode($1, $3, yylineno);
                 }
                 ;
 
+statement_list  : statement_list statement {
+                    static_cast<StatementListNode*>($1)->append($2);
+                    $$ = $1;
+                }
+                | /* epsilon */ {
+                    $$ = new StatementListNode(yylineno);
+                }
+                ;
+
+statement       : identifier ASSIGN number SEMICOLON {
+                    $$ = new AssignmentStatementNode($1, $3, yylineno);
+                }
+
 identifier      : IDENTIFIER {
-                    $$ = new IdentifierNode(yytext);
+                    $$ = new IdentifierNode(yytext, yylineno);
                 }
                 ;
 
 type            : I32 {
-                    $$ = new TypeNode(Type::i32);
+                    $$ = new TypeNode(Type::i32, yylineno);
                 }
                 | BOOL {
-                    $$ = new TypeNode(Type::Bool);
+                    $$ = new TypeNode(Type::Bool, yylineno);
+                }
+
+number          : NUMBER {
+                    $$ = new NumberNode(atoi(yytext), yylineno);
+                }
+
+bool            : TRUE {
+                    $$ = new BoolNode(true, yylineno);
+                }
+                | FALSE {
+                    $$ = new BoolNode(false, yylineno);
                 }
 
 %%

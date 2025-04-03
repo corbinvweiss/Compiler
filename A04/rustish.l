@@ -13,6 +13,7 @@ void reset_cin();
 %}
 
 %option noyywrap
+%option yylineno
 
 ws     [ ]
 tab    \t

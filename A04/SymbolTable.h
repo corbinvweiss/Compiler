@@ -17,6 +17,11 @@ enum Type {
     array_bool,
 };
 
+union Literal {
+    int i32;
+    bool Bool;
+};
+
 std::string typeToString(Type t);
 
 // struct to hold information for the given symbol
@@ -24,8 +29,13 @@ std::string typeToString(Type t);
 struct SymbolInfo {
     std::string lexeme;
     Type type;
+    Literal value = {0};
     SymbolInfo(std::string lexeme, Type t)
-        :lexeme(lexeme), type(t) {}
+        :lexeme(lexeme), type(t) {
+            // todo: add default initial value?
+        }
+    SymbolInfo(std::string lexeme, Type t, Literal value)
+        :lexeme(lexeme), type(t), value(value) {}
     std::string show();
 };
 

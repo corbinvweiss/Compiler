@@ -7,7 +7,14 @@
 #include <iostream>
 
 std::string SymbolInfo::show() {
-    return lexeme + " : " + typeToString(type);
+    std::string val = "";
+    if(type==Type::i32) {
+        val = std::to_string(value.i32);
+    }
+    else if(type==Type::Bool) {
+        val = std::to_string(value.Bool);
+    }
+    return lexeme + " : " + typeToString(type) + " = " + val;
 }
 
 std::string SymbolTable::get_name() {
