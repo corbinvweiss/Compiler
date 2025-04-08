@@ -41,7 +41,7 @@ int SymbolTable::size() {
 
 void SymbolTable::show() {
     for(auto it = this->symbols.begin(); it != this->symbols.end(); ++it){
-        std::cout << "(" << it->first << ": " << it->second->show() << ") ";
+        std::cout << it->first << ": " << it->second->show() + ", ";
     }
     std::cout << "\n";
 }

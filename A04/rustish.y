@@ -42,8 +42,34 @@ input           : program {
                 }
                 ;
 
-program         : main_def {
-                    $$ = new ProgramNode($1);
+program         : func_def_list main_def {
+                    $$ = new ProgramNode($1, $2);
+                }
+                ;
+
+func_def_list   : func_def_list func_def {
+                    // append func_def to func_def_list
+                    static_cast<FuncDefListNode*>($1)->append($2);
+                    $$ = $1;
+                }
+                | /* epsilon */ {
+                    // Create a new empty function definition list
+                    $$ = new FuncDefListNode(yylineno);
+                }
+                ;
+
+func_def        : FN identifier LPAREN params_list RPAREN ARROW type LCURLY local_decl_list statement_list RCURLY {
+                    $$ = new FuncDefNode($2, $4, $7, $9, $10, yylineno);
+                }
+                ;
+
+params_list     : params_list COMMA var_decl {
+                    // append new var_decl to params_list
+                    static_cast<ParamsListNode*>($1)->append($3);
+                    $$ = $1;
+                } 
+                | var_decl {
+                    $$ = new ParamsListNode($1, yylineno);
                 }
                 ;
 

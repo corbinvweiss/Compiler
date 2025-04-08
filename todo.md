@@ -24,6 +24,13 @@ fn main() {
 Error [line 5]: Bad argument types. f expects (i32, bool, bool), but got (i32, i32, i32). 
 ```
 
+- Add function definitions and function definition list to the grammar
+- Add cpp implementation of func def list and func defs
+- Implement function definitions updating symbol table
+- implement function calls
+- implement assignment from identifiers
+- 
+
 
 ## Check
 1. Assignment of wrong type to a declared variable

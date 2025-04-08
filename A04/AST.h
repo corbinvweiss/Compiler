@@ -105,12 +105,48 @@ class MainDefNode: public ASTNode {
         ~MainDefNode();
 };
 
+class ParamsListNode: public ASTNode {
+    private: 
+        std::vector<VarDeclNode*>* parameters;
+    public:
+        ParamsListNode(ASTNode* param, int line);
+        ~ParamsListNode();
+        void append(ASTNode* parameter);
+        std::vector<Type> getTypes();   // return the types of the parameters
+};
+
+class FuncDefNode: public ASTNode {
+    private:
+        IdentifierNode* identifier;
+        ParamsListNode* params_list;
+        TypeNode*       return_type;
+        LocalDeclListNode* local_decl_list;
+        StatementListNode* stmt_list;
+        SymbolTable* symbol_table;
+    public:
+        FuncDefNode(ASTNode* id, ASTNode* params, ASTNode* type, ASTNode* decl_list, ASTNode* stmt_list, int line);
+        ~FuncDefNode();
+        void UpdateSymbolTable(SymbolTable* ST) override;
+};
+
+class FuncDefListNode: public ASTNode {
+    private:
+        std::vector<FuncDefNode*>* func_def_list;
+    public:
+        FuncDefListNode(int line);
+        ~FuncDefListNode();
+        void append(ASTNode* func_def);
+        void UpdateSymbolTable(SymbolTable* ST) override;
+};
+
+
 class ProgramNode : public ASTNode {
     private:
         MainDefNode* main_def;
+        FuncDefListNode* func_def_list;
         SymbolTable* symbol_table;
     public:
-        ProgramNode(ASTNode *main);
+        ProgramNode(ASTNode* func_list, ASTNode* main);
         ~ProgramNode();
 };
 

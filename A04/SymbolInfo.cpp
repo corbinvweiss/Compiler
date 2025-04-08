@@ -99,7 +99,7 @@ std::string FunctionInfo::show() {
     for(std::size_t i=0; i<param_list.size() - 1; ++i) {
         repr += typeToString(param_list[i]) + ", ";
     }
-    repr += typeToString(param_list[param_list.size() - 1]);
+    repr += typeToString(param_list[param_list.size() - 1]) + ")";
     repr += " -> " + typeToString(getReturnType());
     return repr;
 }
