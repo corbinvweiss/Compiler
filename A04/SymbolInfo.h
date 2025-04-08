@@ -42,15 +42,18 @@ class SymbolInfo {
     public:
         SymbolInfo(Type returnType);
         Type getReturnType();
+        virtual std::string show() = 0; // display the symbol info in a human-readable format
 };
 
 class IdentifierInfo : public SymbolInfo {
     private:
         Literal value;
+        bool initialized;
     public:
-        IdentifierInfo(Type t, Literal val);
+        IdentifierInfo(Type t);
         Literal getValue();
-        TypeError typeError(Type rvalType); // check for a type mismatch.
+        TypeError setValue(Type rtype, Literal rval); // set the value, returning if there is a type error
+        std::string show();
 };
 
 class FunctionInfo : public SymbolInfo {
@@ -62,6 +65,7 @@ class FunctionInfo : public SymbolInfo {
         // Return ArgNumber, ArgType, or None
         TypeError typeError(std::vector<Type> argTypes); 
         std::vector<Type> getParamList();
+        std::string show();
         
 };
 

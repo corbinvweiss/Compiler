@@ -35,26 +35,46 @@ std::string LiteralToString(Type type, Literal value) {
     return val;
 }
 
+// **********************
+
 SymbolInfo::SymbolInfo(Type t) 
 : return_type(t) {}
 Type SymbolInfo::getReturnType() {
     return return_type;
 }
 
-IdentifierInfo::IdentifierInfo(Type t, Literal val)
-: SymbolInfo(t), value(val) {}
+// **************************
+
+IdentifierInfo::IdentifierInfo(Type t)
+: SymbolInfo(t), initialized(false) {}
+
 Literal IdentifierInfo::getValue() {
     return value;
 }
 
-TypeError IdentifierInfo::typeError(Type rvalType) {
-    if(getReturnType() != rvalType) {
+TypeError IdentifierInfo::setValue(Type rtype, Literal rval) {
+    if(getReturnType() != rtype) {
         return TypeError::Assignment;
     }
     else {
+        value = rval;
+        initialized = true;
         return TypeError::None;
     }
 }
+
+std::string IdentifierInfo::show() {
+    std::string val = "";
+    if(initialized) {
+        val = LiteralToString(getReturnType(), value);
+    }
+    else {
+        val = "undefined";
+    }
+    return typeToString(getReturnType()) + " = " + val;
+}
+
+// **************************
 
 FunctionInfo::FunctionInfo(Type returnType, std::vector<Type> paramTypes) 
 : SymbolInfo(returnType), param_list(paramTypes) {}
@@ -63,7 +83,7 @@ TypeError FunctionInfo::typeError(std::vector<Type> argTypes) {
     if(param_list.size() != argTypes.size()) {
         return TypeError::ArgNumber;
     }
-    for(int i=0; i<param_list.size(); ++i) {
+    for(std::size_t i=0; i<param_list.size(); ++i) {
         if(param_list[i] != argTypes[i]) {
             return TypeError::ArgType;
         }
@@ -73,3 +93,14 @@ TypeError FunctionInfo::typeError(std::vector<Type> argTypes) {
 std::vector<Type> FunctionInfo::getParamList() {
     return param_list;
 }
+
+std::string FunctionInfo::show() {
+    std::string repr = "(";
+    for(std::size_t i=0; i<param_list.size() - 1; ++i) {
+        repr += typeToString(param_list[i]) + ", ";
+    }
+    repr += typeToString(param_list[param_list.size() - 1]);
+    repr += " -> " + typeToString(getReturnType());
+    return repr;
+}
+

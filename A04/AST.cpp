@@ -73,8 +73,8 @@ VarDeclNode::~VarDeclNode() {
 void VarDeclNode::UpdateSymbolTable(SymbolTable* ST) {
     std::string lexeme = identifier->get_lexeme();
     Type t = type->getType();
-    IdentifierInfo* info = new IdentifierInfo(lexeme, t);
-    int valid = ST->insert(info);
+    IdentifierInfo* info = new IdentifierInfo(t);
+    int valid = ST->insert(lexeme, info);
     if(valid) {
         std::cout << lexeme << " : " << typeToString(t) << '\n';
     }
@@ -121,28 +121,17 @@ AssignmentStatementNode::~AssignmentStatementNode() {
 }
 
 void AssignmentStatementNode::UpdateSymbolTable(SymbolTable* ST) {
-    // std::cout << "in AssignmentStatmentNode::UpdateSymbolTable\n";
-    // if(!number) {std::cout << "no number!\n";}
+    // get the rvalue and rtype
     Literal rvalue = literal->getValue();
-    // std::cout << "getting rtype\n";
     Type rtype = literal->getType();
+    // fetch the identifier's info
     std::string lexeme = identifier->get_lexeme();
-    // std::cout << "looking up ltype\n";
-    Type ltype = ST->lookup(lexeme)->type;
-    // std::cout << "looking up info\n";
-    // the types match, change the value of the identifier.
-    if(ltype == rtype) {
-        IdentifierInfo* info = ST->lookup(lexeme);
-        info->value = rvalue;
-        std::cout << "Updated value of " << lexeme << " to " 
-            << LiteralToString(rtype, literal->getValue()) << ".\n";
-    }
-    else {
+    IdentifierInfo* info = static_cast<IdentifierInfo*>(ST->lookup(lexeme));
+    TypeError err = info->setValue(rtype, rvalue);
+    if(err == TypeError::Assignment) {
         std::cout << "error [line " << lineno << "]: Cannot assign '" 
-            << typeToString(rtype) << "' to type '" << typeToString(ltype) << "'.\n";
+            << typeToString(rtype) << "' to type '" << typeToString(info->getReturnType()) << "'.\n";
     }
-    // check if the rtype matches the ltype
-    // std::cout << "Updating the symbol table for assignmentStatement\n";
     return;
 }
 

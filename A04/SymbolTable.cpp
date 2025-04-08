@@ -6,26 +6,19 @@
 #include "SymbolTable.h"
 #include <iostream>
 
-IdentifierInfo::IdentifierInfo(std::string lexeme, Type t) 
-    :lexeme(lexeme), type(t) {}
-
-std::string IdentifierInfo::show() {
-    return lexeme + " : " + typeToString(type) + " = " + LiteralToString(type, value);
-}
 
 std::string SymbolTable::get_name() {
     return this->name;
 }
 
-int SymbolTable::insert(IdentifierInfo* info) {
+int SymbolTable::insert(std::string lexeme, SymbolInfo* info) {
     // insert the key, value pair if the key is not already present
     // returns whether insertion was successful
     if(info == nullptr) {
         return 0;
     }
-    std::string key = info->lexeme;
-    if(this->symbols.find(key) == this->symbols.end()) {
-        this->symbols[key] = info;
+    if(this->symbols.find(lexeme) == this->symbols.end()) {
+        this->symbols[lexeme] = info;
         return 1;
     }
     else {
@@ -33,7 +26,7 @@ int SymbolTable::insert(IdentifierInfo* info) {
     }
 }
 
-IdentifierInfo* SymbolTable::lookup(std::string key) {
+SymbolInfo* SymbolTable::lookup(std::string key) {
     if (auto search = this->symbols.find(key); search != this->symbols.end()) {
         return search->second;
     }
@@ -48,7 +41,7 @@ int SymbolTable::size() {
 
 void SymbolTable::show() {
     for(auto it = this->symbols.begin(); it != this->symbols.end(); ++it){
-        std::cout << "(" << it->first << ", " << it->second->show() << ") ";
+        std::cout << "(" << it->first << ": " << it->second->show() << ") ";
     }
     std::cout << "\n";
 }
