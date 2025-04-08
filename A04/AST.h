@@ -21,10 +21,10 @@ class ASTNode {
 
         virtual void UpdateSymbolTable(SymbolTable* ST) {std::cout << "base class UpdateSymbolTable\n"; };
 
-        virtual void set_type(Type t) {
+        virtual void setType(Type t) {
             _type = t;
         }
-        virtual Type get_type() {
+        virtual Type getType() {
             return _type;
         }
 };
@@ -33,7 +33,7 @@ class LiteralNode: public ASTNode {
     private:
         Literal value = Literal();
     public:
-        Literal get_value();
+        Literal getValue();
         LiteralNode(int value, int line);
         LiteralNode(bool value, int line);
         ~LiteralNode();

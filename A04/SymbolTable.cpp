@@ -6,32 +6,6 @@
 #include "SymbolTable.h"
 #include <iostream>
 
-const char* typeNames[] = {
-    "none",
-    "i32",
-    "bool",
-    "[i32]",
-    "[bool]"
-};
-
-std::string typeToString(Type t) {
-    if (t >= Type::none && t <= Type::array_bool) {
-        return typeNames[static_cast<int>(t)];
-    }
-    return "Unknown Type";
-}
-
-std::string LiteralToString(Type type, Literal value) {
-    std::string val = "";
-    if(type==Type::i32 && std::holds_alternative<int>(value)) {
-        val = std::to_string(std::get<int>(value));
-    }
-    else if(type==Type::Bool && std::holds_alternative<bool>(value)) {
-        val = std::to_string(std::get<bool>(value));
-    }
-    return val;
-}
-
 IdentifierInfo::IdentifierInfo(std::string lexeme, Type t) 
     :lexeme(lexeme), type(t) {}
 

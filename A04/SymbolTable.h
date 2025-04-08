@@ -8,19 +8,7 @@
 
 #include <map>
 #include <string>
-
-enum Type {
-    none,
-    i32,
-    Bool,
-    array_i32,
-    array_bool,
-};
-
-using Literal = std::variant<int, bool>;
-
-std::string typeToString(Type t);
-std::string LiteralToString(Type t, Literal l);
+#include "SymbolInfo.h"
 
 // struct to hold information for the given symbol
 // type, value

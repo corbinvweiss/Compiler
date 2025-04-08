@@ -72,7 +72,7 @@ VarDeclNode::~VarDeclNode() {
 }
 void VarDeclNode::UpdateSymbolTable(SymbolTable* ST) {
     std::string lexeme = identifier->get_lexeme();
-    Type t = type->get_type();
+    Type t = type->getType();
     IdentifierInfo* info = new IdentifierInfo(lexeme, t);
     int valid = ST->insert(info);
     if(valid) {
@@ -123,9 +123,9 @@ AssignmentStatementNode::~AssignmentStatementNode() {
 void AssignmentStatementNode::UpdateSymbolTable(SymbolTable* ST) {
     // std::cout << "in AssignmentStatmentNode::UpdateSymbolTable\n";
     // if(!number) {std::cout << "no number!\n";}
-    Literal rvalue = literal->get_value();
+    Literal rvalue = literal->getValue();
     // std::cout << "getting rtype\n";
-    Type rtype = literal->get_type();
+    Type rtype = literal->getType();
     std::string lexeme = identifier->get_lexeme();
     // std::cout << "looking up ltype\n";
     Type ltype = ST->lookup(lexeme)->type;
@@ -135,7 +135,7 @@ void AssignmentStatementNode::UpdateSymbolTable(SymbolTable* ST) {
         IdentifierInfo* info = ST->lookup(lexeme);
         info->value = rvalue;
         std::cout << "Updated value of " << lexeme << " to " 
-            << LiteralToString(rtype, literal->get_value()) << ".\n";
+            << LiteralToString(rtype, literal->getValue()) << ".\n";
     }
     else {
         std::cout << "error [line " << lineno << "]: Cannot assign '" 
@@ -156,23 +156,23 @@ std::string IdentifierNode::get_lexeme() {
 TypeNode::TypeNode(Type t, int line) 
 : ASTNode(line) 
 {
-    set_type(t);
+    setType(t);
 }
 TypeNode::~TypeNode() {}
 
 LiteralNode::LiteralNode(int val, int line)
 : ASTNode(line) 
 {
-    set_type(Type::i32);
+    setType(Type::i32);
     value = Literal(val);
 }
 LiteralNode::LiteralNode(bool val, int line)
 : ASTNode(line)
 {
-    set_type(Type::Bool);
+    setType(Type::Bool);
     value = Literal(val);
 }
 LiteralNode::~LiteralNode() {}
-Literal LiteralNode::get_value() {
+Literal LiteralNode::getValue() {
     return value;
 }
