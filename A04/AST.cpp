@@ -9,21 +9,6 @@ implement the Abstract Syntax Tree for Rustish
 #include "AST.h"
 #include <iostream>
 
-const char* typeNames[] = {
-    "none",
-    "i32",
-    "bool",
-    "[i32]",
-    "[bool]"
-};
-
-std::string typeToString(Type t) {
-    if (t >= Type::none && t <= Type::array_bool) {
-        return typeNames[static_cast<int>(t)];
-    }
-    return "Unknown Type";
-}
-
 ProgramNode::ProgramNode(ASTNode* main) 
 : ASTNode(0) 
 {
@@ -88,7 +73,7 @@ VarDeclNode::~VarDeclNode() {
 void VarDeclNode::UpdateSymbolTable(SymbolTable* ST) {
     std::string lexeme = identifier->get_lexeme();
     Type t = type->get_type();
-    SymbolInfo* info = new SymbolInfo(lexeme, t);
+    IdentifierInfo* info = new IdentifierInfo(lexeme, t);
     int valid = ST->insert(info);
     if(valid) {
         std::cout << lexeme << " : " << typeToString(t) << '\n';
@@ -123,34 +108,34 @@ StatementListNode::~StatementListNode() {
     delete stmt_list;
 }
 
-AssignmentStatementNode::AssignmentStatementNode(ASTNode* id, ASTNode* literal, int line)
+AssignmentStatementNode::AssignmentStatementNode(ASTNode* id, ASTNode* lit, int line)
 : ASTNode(line) 
 {
     identifier = static_cast<IdentifierNode*>(id);
-    number = static_cast<NumberNode*>(literal);
+    literal = static_cast<LiteralNode*>(lit);
 }
 
 AssignmentStatementNode::~AssignmentStatementNode() {
     delete identifier;
-    delete number;
+    delete literal;
 }
 
 void AssignmentStatementNode::UpdateSymbolTable(SymbolTable* ST) {
     // std::cout << "in AssignmentStatmentNode::UpdateSymbolTable\n";
     // if(!number) {std::cout << "no number!\n";}
-    Literal rvalue = {number->get_value()};
+    Literal rvalue = literal->get_value();
     // std::cout << "getting rtype\n";
-    Type rtype = number->get_type();
+    Type rtype = literal->get_type();
     std::string lexeme = identifier->get_lexeme();
     // std::cout << "looking up ltype\n";
     Type ltype = ST->lookup(lexeme)->type;
     // std::cout << "looking up info\n";
     // the types match, change the value of the identifier.
     if(ltype == rtype) {
-        SymbolInfo* info = ST->lookup(lexeme);
+        IdentifierInfo* info = ST->lookup(lexeme);
         info->value = rvalue;
         std::cout << "Updated value of " << lexeme << " to " 
-            << number->get_value() << ".\n";
+            << LiteralToString(rtype, literal->get_value()) << ".\n";
     }
     else {
         std::cout << "error [line " << lineno << "]: Cannot assign '" 
@@ -175,14 +160,19 @@ TypeNode::TypeNode(Type t, int line)
 }
 TypeNode::~TypeNode() {}
 
-// todo: convert to LiteralNode
-NumberNode::NumberNode(int value, int line)
-: ASTNode(line), value(value) {
+LiteralNode::LiteralNode(int val, int line)
+: ASTNode(line) 
+{
     set_type(Type::i32);
+    value = Literal(val);
 }
-
-NumberNode::~NumberNode() {}
-
-int NumberNode::get_value() {
+LiteralNode::LiteralNode(bool val, int line)
+: ASTNode(line)
+{
+    set_type(Type::Bool);
+    value = Literal(val);
+}
+LiteralNode::~LiteralNode() {}
+Literal LiteralNode::get_value() {
     return value;
 }

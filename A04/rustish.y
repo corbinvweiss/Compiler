@@ -77,7 +77,7 @@ statement_list  : statement_list statement {
                 }
                 ;
 
-statement       : identifier ASSIGN number SEMICOLON {
+statement       : identifier ASSIGN literal SEMICOLON {
                     $$ = new AssignmentStatementNode($1, $3, yylineno);
                 }
 
@@ -93,15 +93,14 @@ type            : I32 {
                     $$ = new TypeNode(Type::Bool, yylineno);
                 }
 
-number          : NUMBER {
-                    $$ = new NumberNode(atoi(yytext), yylineno);
+literal         : NUMBER {
+                    $$ = new LiteralNode(atoi(yytext), yylineno);
                 }
-
-bool            : TRUE {
-                    $$ = new BoolNode(true, yylineno);
+                | TRUE {
+                    $$ = new LiteralNode(true, yylineno);
                 }
                 | FALSE {
-                    $$ = new BoolNode(false, yylineno);
+                    $$ = new LiteralNode(false, yylineno);
                 }
 
 %%

@@ -6,4 +6,5 @@ fn main() {
     let mut b: bool;
     a = 5;
     c = 5;
+    a = false;
 }

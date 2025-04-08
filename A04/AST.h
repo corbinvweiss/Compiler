@@ -29,13 +29,14 @@ class ASTNode {
         }
 };
 
-class NumberNode: public ASTNode {
+class LiteralNode: public ASTNode {
     private:
-        int value;
+        Literal value = Literal();
     public:
-        int get_value();
-        NumberNode(int value, int line);
-        ~NumberNode();
+        Literal get_value();
+        LiteralNode(int value, int line);
+        LiteralNode(bool value, int line);
+        ~LiteralNode();
 };
 
 class IdentifierNode: public ASTNode {
@@ -66,9 +67,9 @@ class VarDeclNode: public ASTNode {
 class AssignmentStatementNode: public ASTNode {
     private:
         IdentifierNode* identifier;
-        NumberNode* number;
+        LiteralNode* literal;
     public:
-        AssignmentStatementNode(ASTNode* identifier, ASTNode* number, int line);
+        AssignmentStatementNode(ASTNode* identifier, ASTNode* value, int line);
         ~AssignmentStatementNode();
         void UpdateSymbolTable(SymbolTable* ST) override;
 };

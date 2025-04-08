@@ -1,0 +1,10 @@
+fn f1(n: i32) -> i32 {
+    return f2(n);
+}
+
+fn f2(n: i32) -> i32 {
+    if n > 10 {
+        f1(n+1);
+    }
+    return n;
+}

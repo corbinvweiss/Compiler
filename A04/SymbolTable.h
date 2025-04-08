@@ -17,26 +17,25 @@ enum Type {
     array_bool,
 };
 
-union Literal {
-    int i32;
-    bool Bool;
-};
+using Literal = std::variant<int, bool>;
 
 std::string typeToString(Type t);
+std::string LiteralToString(Type t, Literal l);
 
 // struct to hold information for the given symbol
 // type, value
-struct SymbolInfo {
+struct IdentifierInfo {
     std::string lexeme;
     Type type;
-    Literal value = {0};
-    SymbolInfo(std::string lexeme, Type t)
-        :lexeme(lexeme), type(t) {
-            // todo: add default initial value?
-        }
-    SymbolInfo(std::string lexeme, Type t, Literal value)
-        :lexeme(lexeme), type(t), value(value) {}
+    Literal value = 0;
+    IdentifierInfo(std::string lexeme, Type t);
     std::string show();
+};
+
+struct FunctionInfo {
+    std::string lexeme;
+    std::vector<Type> arglist;
+    Type returnType;
 };
 
 class SymbolTable {
@@ -53,12 +52,12 @@ public:
         Insert a SymbolInfo object into the symbol table
         Returns 1 if successful, 0 if duplicate key.
     */
-    int insert(SymbolInfo* info);
+    int insert(IdentifierInfo* info);
     /*
         Lookup the value associated with a key
         Returns value if found, -1 if not found
     */
-    SymbolInfo* lookup(std::string key);
+    IdentifierInfo* lookup(std::string key);
     /*
         Return the number of key, value pairs in the symbol table
     */
@@ -70,7 +69,7 @@ public:
 
 private:
     std::string name;
-    std::map<std::string, SymbolInfo*> symbols;
+    std::map<std::string, IdentifierInfo*> symbols;
 };
 
 #endif // SYMBOLTABLE_H
