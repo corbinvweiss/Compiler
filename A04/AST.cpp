@@ -23,6 +23,8 @@ ProgramNode::ProgramNode(ASTNode* func_list, ASTNode* main)
     func_def_list = static_cast<FuncDefListNode*>(func_list);
     main_def = static_cast<MainDefNode*>(main);
     setGlobalST(new SymbolTable());
+    func_def_list->UpdateSymbolTable();
+    main_def->UpdateSymbolTable();
 }
 
 ProgramNode::~ProgramNode() {
@@ -49,11 +51,6 @@ MainDefNode::MainDefNode(ASTNode* decl_list, ASTNode* stmts, int line)
         stmt_list = static_cast<StatementListNode*>(stmts);
         std::cout << "Creating symbol table for main\n";
         setLocalST(new SymbolTable());
-
-        local_decl_list->UpdateSymbolTable();
-        LocalST->show();
-        stmt_list->UpdateSymbolTable();
-        LocalST->show();
 }
 MainDefNode::~MainDefNode() {
     delete local_decl_list;
@@ -69,6 +66,13 @@ void MainDefNode::setLocalST(SymbolTable* ST) {
     LocalST = ST;
     local_decl_list->setLocalST(ST);
     stmt_list->setLocalST(ST);
+}
+
+void MainDefNode::UpdateSymbolTable() {
+    local_decl_list->UpdateSymbolTable();
+    LocalST->show();
+    stmt_list->UpdateSymbolTable();
+    LocalST->show();
 }
 
 FuncDefNode::FuncDefNode(ASTNode* id, ASTNode* params, ASTNode* type, ASTNode* decl_list, ASTNode* stmts, int line) 
@@ -317,9 +321,84 @@ void AssignmentStatementNode::setLocalST(SymbolTable* ST) {
     expression->setLocalST(ST);
 }
 
+
 ExpressionNode::ExpressionNode(int line)
 : ASTNode(line) {}
 ExpressionNode::~ExpressionNode() {}
+
+ActualArgsNode::ActualArgsNode(int line) 
+: ASTNode(line) 
+{
+    actual_args = new std::vector<ExpressionNode*>();
+}
+
+ActualArgsNode::ActualArgsNode(ASTNode* arg, int line)
+: ASTNode(line) 
+{
+    actual_args = new std::vector<ExpressionNode*>();
+    actual_args->push_back(static_cast<ExpressionNode*>(arg));
+}
+
+ActualArgsNode::~ActualArgsNode() {
+    for(ExpressionNode* arg : *actual_args) {
+        delete arg;
+    }
+}
+
+void ActualArgsNode::append(ASTNode* arg) {
+    if(actual_args) actual_args->push_back(static_cast<ExpressionNode*>(arg));
+    else std::cout << "no actual_args\n";
+}
+
+void ActualArgsNode::setGlobalST(SymbolTable* ST) {
+    GlobalST = ST;
+    for(ExpressionNode* arg : *actual_args) {
+        arg->setGlobalST(ST);
+    }
+}
+
+void ActualArgsNode::setLocalST(SymbolTable* ST) {
+    LocalST = ST;
+    for(ExpressionNode* arg : *actual_args) {
+        arg->setLocalST(ST);
+    }
+}
+
+CallNode::CallNode(ASTNode* id, ASTNode* act_args, int line) 
+: ExpressionNode(line)
+{
+    identifier = static_cast<IdentifierNode*>(id);
+    actual_args = static_cast<ActualArgsNode*>(act_args);
+}
+
+CallNode::~CallNode() {
+    delete identifier;
+    delete actual_args;
+}
+
+void CallNode::setGlobalST(SymbolTable* ST) {
+    GlobalST = ST;
+    identifier->setGlobalST(ST);
+    actual_args->setGlobalST(ST);
+}
+
+void CallNode::setLocalST(SymbolTable* ST) {
+    LocalST = ST;
+    identifier->setLocalST(ST);
+    actual_args->setLocalST(ST);
+}
+
+Type CallNode::getType() {
+    std::string lexeme = identifier->get_lexeme();
+    SymbolInfo* func = GlobalST->lookup(lexeme);
+    return func->getReturnType();
+}
+
+Literal* CallNode::getValue() {
+    // todo: check for return type.
+    // If returnType is not none, return the value of the return statement
+    return nullptr;
+}
 
 IdentifierNode::IdentifierNode(std::string lexeme, int line)
     : ExpressionNode(line), lexeme(lexeme) {}
@@ -330,10 +409,11 @@ std::string IdentifierNode::get_lexeme() {
     return lexeme;
 }
 
-Literal IdentifierNode::getValue() {
+
+Literal* IdentifierNode::getValue() {
     IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
     if(info) { // identifier exists in local symbol table
-        if(info->isInitialized()) {
+        if(info->getValue()) {  // identifier is initialized
             return info->getValue(); 
         }
         else {
@@ -344,12 +424,12 @@ Literal IdentifierNode::getValue() {
     else {
         std::cout << "error [line " << lineno << "]: " << "Identifier '" << lexeme << "' not found.\n";
     }
-    return {0}; // todo: return a nullptr instead of this janky thing
+    return nullptr;
 }
 
 void IdentifierNode::setValue(ExpressionNode* expr) {
     Type rtype = expr->getType();
-    Literal rval = expr->getValue();
+    Literal* rval = expr->getValue();
     // fetch the existing information for this identifier from the LocalST
     IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
     if(!info) { // identifier not found because it has not been declared.
@@ -360,6 +440,9 @@ void IdentifierNode::setValue(ExpressionNode* expr) {
     if(err == TypeError::Assignment) {
         std::cout << "error [line " << lineno << "]: Cannot assign '" 
             << typeToString(rtype) << "' to type '" << typeToString(info->getReturnType()) << "'.\n";
+    }
+    if(err == TypeError::RValue) {
+        std::cout << "error [line " << lineno << "]: Undefined R Value.\n";
     }
 }
 
@@ -382,15 +465,15 @@ LiteralNode::LiteralNode(int val, int line)
 : ExpressionNode(line) 
 {
     setType(Type::i32);
-    value = Literal(val);
+    value = new Literal(val);
 }
 LiteralNode::LiteralNode(bool val, int line)
 : ExpressionNode(line)
 {
     setType(Type::Bool);
-    value = Literal(val);
+    value = new Literal(val);
 }
 LiteralNode::~LiteralNode() {}
-Literal LiteralNode::getValue() {
+Literal* LiteralNode::getValue() {
     return value;
 }

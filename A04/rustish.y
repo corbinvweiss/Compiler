@@ -111,7 +111,26 @@ statement       : identifier ASSIGN expression SEMICOLON {
                 }
                 ;
 
-expression      : literal {
+func_call_expression : identifier LPAREN actual_args RPAREN {
+                    $$ = new CallNode($1, $3, yylineno);
+                }
+
+actual_args     : expression {
+                    $$ = new ActualArgsNode($1, yylineno);
+                }
+                | actual_args COMMA expression {
+                    static_cast<ActualArgsNode*>($1)->append($3);
+                    $$ = $1;
+                }
+                | /* epsilon */ {
+                    $$ = new ActualArgsNode(yylineno);
+                }
+                ;
+
+expression      : func_call_expression {
+                    $$ = $1;
+                }
+                | literal {
                     $$ = $1;
                 }
                 | identifier {
@@ -130,6 +149,7 @@ type            : I32 {
                 | BOOL {
                     $$ = new TypeNode(Type::Bool, yylineno);
                 }
+                ;
 
 literal         : NUMBER {
                     $$ = new LiteralNode(atoi(yytext), yylineno);
@@ -140,6 +160,7 @@ literal         : NUMBER {
                 | FALSE {
                     $$ = new LiteralNode(false, yylineno);
                 }
+                ;
 
 %%
 

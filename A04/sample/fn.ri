@@ -3,11 +3,9 @@ fn f(x: i32, a: bool) -> bool {
     a = 5;
 }
 
-fn g(a: bool, b: i32) -> i32 {
-
-}
-
 fn main() {
     let mut b: bool;
-    b = false;
+    let mut x: i32;
+    b = f(1, false);
+    x = f(1, false);
 }

@@ -46,14 +46,14 @@ class ExpressionNode: public ASTNode {
     public:
         ExpressionNode(int line);
         ~ExpressionNode();
-        virtual Literal getValue() = 0;
+        virtual Literal* getValue() = 0;
 };
 
 class LiteralNode: public ExpressionNode {
     private:
-        Literal value = Literal();
+        Literal* value = new Literal();
     public:
-        Literal getValue() override;
+        Literal* getValue() override;
         LiteralNode(int value, int line);
         LiteralNode(bool value, int line);
         ~LiteralNode();
@@ -72,7 +72,7 @@ class IdentifierNode: public ExpressionNode {
         std::string get_lexeme();
         IdentifierNode(std::string id, int line);
         ~IdentifierNode();
-        Literal getValue() override;
+        Literal* getValue() override;
         void setValue(ExpressionNode* expr);
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
@@ -88,10 +88,6 @@ class VarDeclNode: public ASTNode {
         void UpdateSymbolTable() override;
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
-};
-
-class CallNode: public ExpressionNode {
-
 };
 
 class AssignmentStatementNode: public ASTNode {
@@ -140,6 +136,7 @@ class MainDefNode: public ASTNode {
         ~MainDefNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
+        void UpdateSymbolTable() override;
 };
 
 class ParamsListNode: public ASTNode {
@@ -163,9 +160,34 @@ class FuncDefNode: public ASTNode {
     public:
         FuncDefNode(ASTNode* id, ASTNode* params, ASTNode* type, ASTNode* decl_list, ASTNode* stmt_list, int line);
         ~FuncDefNode();
-        void UpdateSymbolTable() override;
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
+        void UpdateSymbolTable() override;
+};
+
+class ActualArgsNode: public ASTNode {
+    private:
+        std::vector<ExpressionNode*>* actual_args;
+    public:
+        ActualArgsNode(int line);
+        ActualArgsNode(ASTNode* arg, int line);
+        ~ActualArgsNode();
+        void append(ASTNode* arg);
+        void setGlobalST(SymbolTable* ST) override;
+        void setLocalST(SymbolTable* ST) override;
+};
+
+class CallNode: public ExpressionNode {
+    private:
+        IdentifierNode* identifier;
+        ActualArgsNode* actual_args;
+    public:
+        CallNode(ASTNode* id, ASTNode* act_args, int line);
+        ~CallNode();
+        void setGlobalST(SymbolTable* ST) override;
+        void setLocalST(SymbolTable* ST) override;
+        Type getType() override;
+        Literal* getValue() override;
 };
 
 class FuncDefListNode: public ASTNode {

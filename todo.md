@@ -29,10 +29,13 @@ Error [line 5]: Bad argument types. f expects (i32, bool, bool), but got (i32, i
 - Implement function definitions updating symbol table
 - implement function calls
 - implement assignment from identifiers
+- move UpdateSymbolTable to program level so that it has everything initialized first
 
 
 ## Next Steps
 - Remove type nodes once they have been put in the Symbol Table
+- implement TypeError as a class that inherits from std::runtime_error
+- add a None option to Literal: did that using a nullptr
 
 
 ## Check

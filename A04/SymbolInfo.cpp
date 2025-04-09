@@ -46,31 +46,29 @@ Type SymbolInfo::getReturnType() {
 // **************************
 
 IdentifierInfo::IdentifierInfo(Type t)
-: SymbolInfo(t), initialized(false) {}
+: SymbolInfo(t) {}
 
-bool IdentifierInfo::isInitialized() {
-    return initialized;
-}
-
-Literal IdentifierInfo::getValue() {
+Literal* IdentifierInfo::getValue() {
     return value;
 }
 
-TypeError IdentifierInfo::setValue(Type rtype, Literal rval) {
+TypeError IdentifierInfo::setValue(Type rtype, Literal* rval) {
     if(getReturnType() != rtype) {
         return TypeError::Assignment;
     }
-    else {
+    if(rval) {
         value = rval;
-        initialized = true;
         return TypeError::None;
+    }
+    else {
+        return TypeError::RValue;
     }
 }
 
 std::string IdentifierInfo::show() {
     std::string val = "";
-    if(initialized) {
-        val = LiteralToString(getReturnType(), value);
+    if(value) {
+        val = LiteralToString(getReturnType(), *value);
     }
     else {
         val = "undefined";
