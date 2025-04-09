@@ -73,6 +73,7 @@ class IdentifierNode: public ExpressionNode {
         IdentifierNode(std::string id, int line);
         ~IdentifierNode();
         Literal getValue() override;
+        void setValue(ExpressionNode* expr);
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
 };

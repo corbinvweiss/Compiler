@@ -51,6 +51,7 @@ class IdentifierInfo : public SymbolInfo {
         bool initialized;
     public:
         IdentifierInfo(Type t);
+        bool isInitialized();
         Literal getValue();
         TypeError setValue(Type rtype, Literal rval); // set the value, returning if there is a type error
         std::string show();

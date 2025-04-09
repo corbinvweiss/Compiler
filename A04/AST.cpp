@@ -71,8 +71,6 @@ void MainDefNode::setLocalST(SymbolTable* ST) {
     stmt_list->setLocalST(ST);
 }
 
-// TODO: pick up here with the recursive descent of the global symbol table
-
 FuncDefNode::FuncDefNode(ASTNode* id, ASTNode* params, ASTNode* type, ASTNode* decl_list, ASTNode* stmts, int line) 
 : ASTNode(line)
 {
@@ -302,17 +300,8 @@ AssignmentStatementNode::~AssignmentStatementNode() {
 }
 
 void AssignmentStatementNode::UpdateSymbolTable() {
-    // get the rvalue and rtype
-    Literal rvalue = expression->getValue();
-    Type rtype = expression->getType();
-    // fetch the identifier's info
-    std::string lexeme = identifier->get_lexeme();
-    IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
-    TypeError err = info->setValue(rtype, rvalue);
-    if(err == TypeError::Assignment) {
-        std::cout << "error [line " << lineno << "]: Cannot assign '" 
-            << typeToString(rtype) << "' to type '" << typeToString(info->getReturnType()) << "'.\n";
-    }
+
+    identifier->setValue(expression);
     return;
 }
 
@@ -343,8 +332,35 @@ std::string IdentifierNode::get_lexeme() {
 
 Literal IdentifierNode::getValue() {
     IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
-    return info->getValue();
-    // TODO: this won't work for functions
+    if(info) { // identifier exists in local symbol table
+        if(info->isInitialized()) {
+            return info->getValue(); 
+        }
+        else {
+            std::cout << "error [line " << lineno << "]: " << "Identifier '" << lexeme << "' not initialized.\n";
+        }
+        
+    }
+    else {
+        std::cout << "error [line " << lineno << "]: " << "Identifier '" << lexeme << "' not found.\n";
+    }
+    return {0}; // todo: return a nullptr instead of this janky thing
+}
+
+void IdentifierNode::setValue(ExpressionNode* expr) {
+    Type rtype = expr->getType();
+    Literal rval = expr->getValue();
+    // fetch the existing information for this identifier from the LocalST
+    IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
+    if(!info) { // identifier not found because it has not been declared.
+        std::cout << "error [line " << lineno << "]: Identifier '" << lexeme << "'" << " not declared.\n";
+        return;
+    }
+    TypeError err = info->setValue(rtype, rval);
+    if(err == TypeError::Assignment) {
+        std::cout << "error [line " << lineno << "]: Cannot assign '" 
+            << typeToString(rtype) << "' to type '" << typeToString(info->getReturnType()) << "'.\n";
+    }
 }
 
 void IdentifierNode::setGlobalST(SymbolTable* ST) {

@@ -48,6 +48,10 @@ Type SymbolInfo::getReturnType() {
 IdentifierInfo::IdentifierInfo(Type t)
 : SymbolInfo(t), initialized(false) {}
 
+bool IdentifierInfo::isInitialized() {
+    return initialized;
+}
+
 Literal IdentifierInfo::getValue() {
     return value;
 }

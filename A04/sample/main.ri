@@ -7,4 +7,6 @@ fn main() {
     a = 5;
     c = 5;
     a = false;
+    a = b;
+    d = 17;
 }
