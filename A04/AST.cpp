@@ -6,20 +6,40 @@ Corbin Weiss
 implement the Abstract Syntax Tree for Rustish
 */
 
+/*
+Symbol table structure:
+ProgramNode owns GlobalST, and shares it with the functions and main.
+Each function owns its LocalST, and shares both the GlobalST and LocalST with its decls and statements
+*/
+
 #include "AST.h"
 #include <iostream>
+
+ASTNode::ASTNode(int line) :lineno(line) {}
 
 ProgramNode::ProgramNode(ASTNode* func_list, ASTNode* main) 
 : ASTNode(0) 
 {
-    symbol_table = new SymbolTable();
     func_def_list = static_cast<FuncDefListNode*>(func_list);
-    func_def_list->UpdateSymbolTable(symbol_table); // Put the function definitions in the global symbol table
     main_def = static_cast<MainDefNode*>(main);
+    setGlobalST(new SymbolTable());
 }
 
 ProgramNode::~ProgramNode() {
+    delete func_def_list;
     delete main_def;
+}
+
+void ProgramNode::setGlobalST(SymbolTable* ST) {
+    GlobalST = ST;
+    func_def_list->setGlobalST(ST);
+    main_def->setGlobalST(ST);
+}
+
+void ProgramNode::setLocalST(SymbolTable* ST) {
+    LocalST = ST;
+    func_def_list->setLocalST(ST);
+    main_def->setLocalST(ST);
 }
 
 MainDefNode::MainDefNode(ASTNode* decl_list, ASTNode* stmts, int line) 
@@ -27,16 +47,31 @@ MainDefNode::MainDefNode(ASTNode* decl_list, ASTNode* stmts, int line)
 {
         local_decl_list = static_cast<LocalDeclListNode*>(decl_list);
         stmt_list = static_cast<StatementListNode*>(stmts);
-        symbol_table = new SymbolTable();
         std::cout << "Creating symbol table for main\n";
-        local_decl_list->UpdateSymbolTable(symbol_table);
-        symbol_table->show();
-        stmt_list->UpdateSymbolTable(symbol_table);
-        symbol_table->show();
+        setLocalST(new SymbolTable());
+
+        local_decl_list->UpdateSymbolTable();
+        LocalST->show();
+        stmt_list->UpdateSymbolTable();
+        LocalST->show();
 }
 MainDefNode::~MainDefNode() {
     delete local_decl_list;
 }
+
+void MainDefNode::setGlobalST(SymbolTable* ST) {
+    GlobalST = ST;
+    local_decl_list->setGlobalST(ST);
+    stmt_list->setGlobalST(ST);
+}
+
+void MainDefNode::setLocalST(SymbolTable* ST) {
+    LocalST = ST;
+    local_decl_list->setLocalST(ST);
+    stmt_list->setLocalST(ST);
+}
+
+// TODO: pick up here with the recursive descent of the global symbol table
 
 FuncDefNode::FuncDefNode(ASTNode* id, ASTNode* params, ASTNode* type, ASTNode* decl_list, ASTNode* stmts, int line) 
 : ASTNode(line)
@@ -46,13 +81,10 @@ FuncDefNode::FuncDefNode(ASTNode* id, ASTNode* params, ASTNode* type, ASTNode* d
     return_type = static_cast<TypeNode*>(type);
     local_decl_list = static_cast<LocalDeclListNode*>(decl_list);
     stmt_list = static_cast<StatementListNode*>(stmts);
-    symbol_table = new SymbolTable();
+    
+    // share this function's symbol table with decl_list and stmt_list
+    setLocalST(new SymbolTable());
     setType(return_type->getType());    // the type of the function is its return type.
-    std::cout << "Creating symbol table for function " << identifier->get_lexeme() << "\n";
-    local_decl_list->UpdateSymbolTable(symbol_table);
-    symbol_table->show();
-    stmt_list->UpdateSymbolTable(symbol_table);
-    symbol_table->show();
 }
 FuncDefNode::~FuncDefNode() {
     delete identifier;
@@ -60,15 +92,30 @@ FuncDefNode::~FuncDefNode() {
     delete return_type;
     delete local_decl_list;
     delete stmt_list;
-    delete symbol_table;
 }
-void FuncDefNode::UpdateSymbolTable(SymbolTable* ST) {
-    // TODO: implement this to put the function definition in the global symbol table
+void FuncDefNode::UpdateSymbolTable() {
     std::cout << "Adding function " << identifier->get_lexeme() << " to global symbol table\n";
     std::string lexeme = identifier->get_lexeme();
     FunctionInfo* info = new FunctionInfo(getType(), params_list->getTypes());
-    ST->insert(lexeme, info);
-    ST->show();
+    GlobalST->insert(lexeme, info);
+    GlobalST->show();
+    std::cout << "Creating symbol table for function " << identifier->get_lexeme() << "\n";
+    local_decl_list->UpdateSymbolTable();
+    LocalST->show();
+    stmt_list->UpdateSymbolTable();
+    LocalST->show();
+}
+
+void FuncDefNode::setGlobalST(SymbolTable* ST) {
+    GlobalST = ST;
+    local_decl_list->setGlobalST(ST);
+    stmt_list->setGlobalST(ST);
+}
+
+void FuncDefNode::setLocalST(SymbolTable* ST) {
+    LocalST = ST;
+    local_decl_list->setLocalST(ST);
+    stmt_list->setLocalST(ST);
 }
 
 ParamsListNode::ParamsListNode(ASTNode* param, int line)
@@ -96,7 +143,6 @@ std::vector<Type> ParamsListNode::getTypes() {
     return types;
 }
 
-
 FuncDefListNode::FuncDefListNode(int line) 
 : ASTNode(line)
 {
@@ -113,9 +159,16 @@ void FuncDefListNode::append(ASTNode* func_def) {
     func_def_list->push_back(static_cast<FuncDefNode*>(func_def));
 }
 
-void FuncDefListNode::UpdateSymbolTable(SymbolTable* ST) {
+void FuncDefListNode::UpdateSymbolTable() {
     for(FuncDefNode* func_def : *func_def_list) {
-        func_def->UpdateSymbolTable(ST);
+        func_def->UpdateSymbolTable();
+    }
+}
+
+void FuncDefListNode::setGlobalST(SymbolTable* ST) {
+    GlobalST = ST;
+    for(FuncDefNode* func_def : *func_def_list) {
+        func_def->setGlobalST(ST);
     }
 }
 
@@ -125,23 +178,41 @@ LocalDeclListNode::LocalDeclListNode(int line)
 {
     decl_list = new std::vector<VarDeclNode*>();
 }
+
 LocalDeclListNode::LocalDeclListNode(ASTNode* decl, int line)
 : ASTNode(line) 
 {
     decl_list = new std::vector<VarDeclNode*>();
     decl_list->push_back(static_cast<VarDeclNode*>(decl));
 }
-void LocalDeclListNode::append(ASTNode* decl) {
-    decl_list->push_back(static_cast<VarDeclNode*>(decl));
-}
-void LocalDeclListNode::UpdateSymbolTable(SymbolTable* ST) {
-    for(VarDeclNode* declaration : *decl_list) {
-        declaration->UpdateSymbolTable(ST);
-    }
-}
+
 LocalDeclListNode::~LocalDeclListNode() {
     for (VarDeclNode *decl : *decl_list) {
         delete decl;
+    }
+}
+
+void LocalDeclListNode::append(ASTNode* decl) {
+    decl_list->push_back(static_cast<VarDeclNode*>(decl));
+}
+
+void LocalDeclListNode::UpdateSymbolTable() {
+    for(VarDeclNode* declaration : *decl_list) {
+        declaration->UpdateSymbolTable();
+    }
+}
+
+void LocalDeclListNode::setGlobalST(SymbolTable* ST) {
+    GlobalST = ST;
+    for(VarDeclNode* declaration : *decl_list) {
+        declaration->setGlobalST(ST);
+    }
+}
+
+void LocalDeclListNode::setLocalST(SymbolTable* ST) {
+    LocalST = ST;
+    for(VarDeclNode* declaration : *decl_list) {
+        declaration->setLocalST(ST);
     }
 }
 
@@ -156,10 +227,10 @@ VarDeclNode::~VarDeclNode() {
     delete identifier;
     delete type;
 }
-void VarDeclNode::UpdateSymbolTable(SymbolTable* ST) {
+void VarDeclNode::UpdateSymbolTable() {
     std::string lexeme = identifier->get_lexeme();
     IdentifierInfo* info = new IdentifierInfo(getType());
-    int valid = ST->insert(lexeme, info);
+    int valid = LocalST->insert(lexeme, info);
     if(valid) {
         std::cout << lexeme << " : " << typeToString(getType()) << '\n';
     }
@@ -168,22 +239,20 @@ void VarDeclNode::UpdateSymbolTable(SymbolTable* ST) {
     }
 }
 
+void VarDeclNode::setGlobalST(SymbolTable* ST) {
+    GlobalST = ST;
+    identifier->setGlobalST(ST);
+}
+
+void VarDeclNode::setLocalST(SymbolTable* ST) {
+    LocalST = ST;
+    identifier->setLocalST(ST);
+}
+
 StatementListNode::StatementListNode(int line)
 : ASTNode(line) 
 {
     stmt_list = new std::vector<ASTNode*>();
-}
-
-void StatementListNode::append(ASTNode* stmt) {
-    stmt_list->push_back(stmt);
-}
-
-void StatementListNode::UpdateSymbolTable(SymbolTable* ST) {
-    // std::cout << "in StatementListNode::UpdateSymbolTable\n";
-    for(ASTNode* stmt : *stmt_list) {
-        // std::cout << "iterating next statement\n";
-        stmt->UpdateSymbolTable(ST);
-    }
 }
 
 StatementListNode::~StatementListNode() {
@@ -193,25 +262,52 @@ StatementListNode::~StatementListNode() {
     delete stmt_list;
 }
 
-AssignmentStatementNode::AssignmentStatementNode(ASTNode* id, ASTNode* lit, int line)
+void StatementListNode::append(ASTNode* stmt) {
+    stmt_list->push_back(stmt);
+}
+
+void StatementListNode::UpdateSymbolTable() {
+    // std::cout << "in StatementListNode::UpdateSymbolTable\n";
+    for(ASTNode* stmt : *stmt_list) {
+        // std::cout << "iterating next statement\n";
+        stmt->UpdateSymbolTable();
+    }
+}
+
+void StatementListNode::setGlobalST(SymbolTable* ST) {
+    GlobalST = ST;
+    for(ASTNode* stmt : *stmt_list) {
+        stmt->setGlobalST(ST);
+    }
+}
+
+void StatementListNode::setLocalST(SymbolTable* ST) {
+    LocalST = ST;
+    for(ASTNode* stmt : *stmt_list) {
+        stmt->setLocalST(ST);
+    }
+}
+
+
+AssignmentStatementNode::AssignmentStatementNode(ASTNode* id, ASTNode* expr, int line)
 : ASTNode(line) 
 {
     identifier = static_cast<IdentifierNode*>(id);
-    literal = static_cast<LiteralNode*>(lit);
+    expression = static_cast<ExpressionNode*>(expr);
 }
 
 AssignmentStatementNode::~AssignmentStatementNode() {
     delete identifier;
-    delete literal;
+    delete expression;
 }
 
-void AssignmentStatementNode::UpdateSymbolTable(SymbolTable* ST) {
+void AssignmentStatementNode::UpdateSymbolTable() {
     // get the rvalue and rtype
-    Literal rvalue = literal->getValue();
-    Type rtype = literal->getType();
+    Literal rvalue = expression->getValue();
+    Type rtype = expression->getType();
     // fetch the identifier's info
     std::string lexeme = identifier->get_lexeme();
-    IdentifierInfo* info = static_cast<IdentifierInfo*>(ST->lookup(lexeme));
+    IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
     TypeError err = info->setValue(rtype, rvalue);
     if(err == TypeError::Assignment) {
         std::cout << "error [line " << lineno << "]: Cannot assign '" 
@@ -220,11 +316,43 @@ void AssignmentStatementNode::UpdateSymbolTable(SymbolTable* ST) {
     return;
 }
 
+void AssignmentStatementNode::setGlobalST(SymbolTable* ST) {
+    GlobalST = ST;
+    identifier->setGlobalST(ST);
+    expression->setGlobalST(ST);
+}
+
+void AssignmentStatementNode::setLocalST(SymbolTable* ST) {
+    LocalST = ST;
+    identifier->setLocalST(ST);
+    expression->setLocalST(ST);
+}
+
+ExpressionNode::ExpressionNode(int line)
+: ASTNode(line) {}
+ExpressionNode::~ExpressionNode() {}
+
 IdentifierNode::IdentifierNode(std::string lexeme, int line)
-    : ASTNode(line), lexeme(lexeme) {}
+    : ExpressionNode(line), lexeme(lexeme) {}
+
 IdentifierNode::~IdentifierNode() {}
+
 std::string IdentifierNode::get_lexeme() {
     return lexeme;
+}
+
+Literal IdentifierNode::getValue() {
+    IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
+    return info->getValue();
+    // TODO: this won't work for functions
+}
+
+void IdentifierNode::setGlobalST(SymbolTable* ST) {
+    GlobalST = ST;
+}
+
+void IdentifierNode::setLocalST(SymbolTable* ST) {
+    LocalST = ST;
 }
 
 TypeNode::TypeNode(Type t, int line) 
@@ -235,13 +363,13 @@ TypeNode::TypeNode(Type t, int line)
 TypeNode::~TypeNode() {}
 
 LiteralNode::LiteralNode(int val, int line)
-: ASTNode(line) 
+: ExpressionNode(line) 
 {
     setType(Type::i32);
     value = Literal(val);
 }
 LiteralNode::LiteralNode(bool val, int line)
-: ASTNode(line)
+: ExpressionNode(line)
 {
     setType(Type::Bool);
     value = Literal(val);

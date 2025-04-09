@@ -29,7 +29,10 @@ Error [line 5]: Bad argument types. f expects (i32, bool, bool), but got (i32, i
 - Implement function definitions updating symbol table
 - implement function calls
 - implement assignment from identifiers
-- 
+
+
+## Next Steps
+- Remove type nodes once they have been put in the Symbol Table
 
 
 ## Check

@@ -3,6 +3,13 @@ AST.h
 Corbin Weiss
 27 March 2025
 Define the classes used in the Abstract Syntax Tree for Rustish
+*/
+
+/*
+*** Outline of Approach ***
+Every ASTNode has a type, a line number, and a pointer to its local and global symbol table
+The Program owns the global symbol table, and each function owns its own local symbol table
+The owners of the symbol tables create them and share them with their children using setLocalST
 
 */
 #pragma once
@@ -16,10 +23,14 @@ class ASTNode {
         Type _type = Type::none;
     public:
         int lineno;
-        ASTNode(int line) :lineno(line) {};
-        virtual ~ASTNode() = default;
+        SymbolTable* GlobalST;
+        SymbolTable* LocalST;
 
-        virtual void UpdateSymbolTable(SymbolTable* ST) {std::cout << "base class UpdateSymbolTable\n"; };
+        ASTNode(int line);
+        virtual ~ASTNode() = default;
+        virtual void setGlobalST(SymbolTable* ST) {std::cout << "base setGlobalST\n"; };
+        virtual void setLocalST(SymbolTable* ST) {std::cout << "base setLocalST\n"; };
+        virtual void UpdateSymbolTable() {std::cout << "base class UpdateSymbolTable\n"; };
 
         virtual void setType(Type t) {
             _type = t;
@@ -27,31 +38,43 @@ class ASTNode {
         virtual Type getType() {
             return _type;
         }
+        
 };
 
-class LiteralNode: public ASTNode {
+// an expression is one that has a value
+class ExpressionNode: public ASTNode {
+    public:
+        ExpressionNode(int line);
+        ~ExpressionNode();
+        virtual Literal getValue() = 0;
+};
+
+class LiteralNode: public ExpressionNode {
     private:
         Literal value = Literal();
     public:
-        Literal getValue();
+        Literal getValue() override;
         LiteralNode(int value, int line);
         LiteralNode(bool value, int line);
         ~LiteralNode();
-};
-
-class IdentifierNode: public ASTNode {
-    private:
-        std::string lexeme;
-    public:
-        std::string get_lexeme();
-        IdentifierNode(std::string id, int line);
-        ~IdentifierNode();
 };
 
 class TypeNode: public ASTNode {
     public:
         TypeNode(Type t, int line);
         ~TypeNode();
+};
+
+class IdentifierNode: public ExpressionNode {
+    private:
+        std::string lexeme;
+    public:
+        std::string get_lexeme();
+        IdentifierNode(std::string id, int line);
+        ~IdentifierNode();
+        Literal getValue() override;
+        void setGlobalST(SymbolTable* ST) override;
+        void setLocalST(SymbolTable* ST) override;
 };
 
 class VarDeclNode: public ASTNode {
@@ -61,17 +84,25 @@ class VarDeclNode: public ASTNode {
     public:
         VarDeclNode(ASTNode* id, ASTNode* t, int line);
         ~VarDeclNode();
-        void UpdateSymbolTable(SymbolTable* symbol_table) override;
+        void UpdateSymbolTable() override;
+        void setGlobalST(SymbolTable* ST) override;
+        void setLocalST(SymbolTable* ST) override;
+};
+
+class CallNode: public ExpressionNode {
+
 };
 
 class AssignmentStatementNode: public ASTNode {
     private:
         IdentifierNode* identifier;
-        LiteralNode* literal;
+        ExpressionNode* expression;
     public:
-        AssignmentStatementNode(ASTNode* identifier, ASTNode* value, int line);
+        AssignmentStatementNode(ASTNode* identifier, ASTNode* expr, int line);
         ~AssignmentStatementNode();
-        void UpdateSymbolTable(SymbolTable* ST) override;
+        void UpdateSymbolTable() override;
+        void setGlobalST(SymbolTable* ST) override;
+        void setLocalST(SymbolTable* ST) override;
 };
 
 class StatementListNode: public ASTNode {
@@ -80,8 +111,10 @@ class StatementListNode: public ASTNode {
     public:
         StatementListNode(int line);
         ~StatementListNode();
-        void UpdateSymbolTable(SymbolTable* symbol_table) override;
+        void UpdateSymbolTable() override;
         void append(ASTNode* stmt);
+        void setGlobalST(SymbolTable* ST) override;
+        void setLocalST(SymbolTable* ST) override;
 };
 
 class LocalDeclListNode: public ASTNode {
@@ -90,19 +123,22 @@ class LocalDeclListNode: public ASTNode {
     public:
         LocalDeclListNode(int lineno);
         LocalDeclListNode(ASTNode* decl, int line);
-        void UpdateSymbolTable(SymbolTable* symbol_table) override;
-        void append(ASTNode* decl);
         ~LocalDeclListNode();
+        void UpdateSymbolTable() override;
+        void append(ASTNode* decl);
+        void setGlobalST(SymbolTable* ST) override;
+        void setLocalST(SymbolTable* ST) override;
 };
 
 class MainDefNode: public ASTNode {
     private:
         LocalDeclListNode* local_decl_list;
         StatementListNode* stmt_list;
-        SymbolTable* symbol_table;
     public:
         MainDefNode(ASTNode* local_decl_list, ASTNode* stmt_list, int line);
         ~MainDefNode();
+        void setGlobalST(SymbolTable* ST) override;
+        void setLocalST(SymbolTable* ST) override;
 };
 
 class ParamsListNode: public ASTNode {
@@ -113,6 +149,7 @@ class ParamsListNode: public ASTNode {
         ~ParamsListNode();
         void append(ASTNode* parameter);
         std::vector<Type> getTypes();   // return the types of the parameters
+        // note: the parameters of a function do not need symbol tables
 };
 
 class FuncDefNode: public ASTNode {
@@ -122,11 +159,12 @@ class FuncDefNode: public ASTNode {
         TypeNode*       return_type;
         LocalDeclListNode* local_decl_list;
         StatementListNode* stmt_list;
-        SymbolTable* symbol_table;
     public:
         FuncDefNode(ASTNode* id, ASTNode* params, ASTNode* type, ASTNode* decl_list, ASTNode* stmt_list, int line);
         ~FuncDefNode();
-        void UpdateSymbolTable(SymbolTable* ST) override;
+        void UpdateSymbolTable() override;
+        void setGlobalST(SymbolTable* ST) override;
+        void setLocalST(SymbolTable* ST) override;
 };
 
 class FuncDefListNode: public ASTNode {
@@ -136,7 +174,9 @@ class FuncDefListNode: public ASTNode {
         FuncDefListNode(int line);
         ~FuncDefListNode();
         void append(ASTNode* func_def);
-        void UpdateSymbolTable(SymbolTable* ST) override;
+        void UpdateSymbolTable() override;
+        void setGlobalST(SymbolTable* ST) override;
+        // note: the list of function def's do not exist in a local symbol table 
 };
 
 
@@ -144,10 +184,11 @@ class ProgramNode : public ASTNode {
     private:
         MainDefNode* main_def;
         FuncDefListNode* func_def_list;
-        SymbolTable* symbol_table;
     public:
         ProgramNode(ASTNode* func_list, ASTNode* main);
         ~ProgramNode();
+        void setGlobalST(SymbolTable* ST) override;
+        void setLocalST(SymbolTable* ST) override;
 };
 
 

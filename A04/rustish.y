@@ -103,9 +103,21 @@ statement_list  : statement_list statement {
                 }
                 ;
 
-statement       : identifier ASSIGN literal SEMICOLON {
+statement       : identifier ASSIGN expression SEMICOLON {
                     $$ = new AssignmentStatementNode($1, $3, yylineno);
                 }
+                | expression SEMICOLON {
+                    $$ = $1;
+                }
+                ;
+
+expression      : literal {
+                    $$ = $1;
+                }
+                | identifier {
+                    $$ = $1;
+                }
+                ;
 
 identifier      : IDENTIFIER {
                     $$ = new IdentifierNode(yytext, yylineno);
