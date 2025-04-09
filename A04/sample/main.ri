@@ -9,6 +9,7 @@ fn main() {
     d = 17;     // undeclared lvalue
     a = b;      // uninitialized
     a = false;
+    b = 52;
     a = b;
     d = 17;
 }

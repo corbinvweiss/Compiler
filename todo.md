@@ -5,7 +5,7 @@ The following should cause errors:
 - [x] Using an undeclared variable (rvalue)
 - [x] Assigning to an undeclared (lvalue)
 - [x] Use of an uninitialized variable
-- [ ] Attempt to call an undefined function
+- [x] Attempt to call an undefined function
 - [x] Passing wrong types of actual arguments to function call
 - [x] Passing wrong number of arguments to function call
 - [ ] Returning wrong type from function call (also returning something from a "void" function)
@@ -13,13 +13,13 @@ The following should cause errors:
 - [ ] Mixed arithmetic (i32/bool)
 - [ ] Arithmetic with bools
 - [ ] Logical comparison with i32s
-- [ ] Missing main function
-- [ ] Missing let, mut, etc
+- [x] Missing main function
+- [x] Missing let, mut, etc
 - [ ] Non-i32 array indices
 - [x] Duplicate function names
 - [x] Duplicate local variables
 - [ ] Non-Boolean expression in an if or while statement
-- [ ] Variable declaration after executable code within a function definition
+- [x] Variable declaration after executable code within a function definition
 
 ---
 Bugs:
@@ -28,17 +28,6 @@ Bugs:
 - You can call an undefined function
 
 ---
-- Throw an error when a variable that has not been initialized is referenced. Perhaps add a flag in the symbol table to keep track of whether the variable has been assigned. 
-- Create a base class SymbolInfo from which FunctionInfo and IdentifierInfo inherit
-    - SymbolInfo has a returnType
-    - FunctionInfo adds a paramList
-    - Identifier adds a value
-- Change SymbolTable->insert(lexeme, SymbolInfo*)
-- Implement LiteralNode
-    - Constructor can take either bool or int
-    - implement LiteralToString(Type t, Literal l)
-
-- Define types of TypeErrors
 
 ## Function type checking
 ```
@@ -52,11 +41,6 @@ fn main() {
 --------
 Error [line 5]: Bad argument types. f expects (i32, bool, bool), but got (i32, i32, i32). 
 ```
-
-- Add function definitions and function definition list to the grammar
-- Add cpp implementation of func def list and func defs
-- Implement function definitions updating symbol table
-- implement function calls
 - implement assignment from identifiers
 - move UpdateSymbolTable to program level so that it has everything initialized first
 
@@ -64,7 +48,6 @@ Error [line 5]: Bad argument types. f expects (i32, bool, bool), but got (i32, i
 ## Next Steps
 - Remove type nodes once they have been put in the Symbol Table
 - implement TypeError as a class that inherits from std::runtime_error
-- add a None option to Literal: did that using a nullptr
 
 
 ## Check

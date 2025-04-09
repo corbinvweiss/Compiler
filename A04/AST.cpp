@@ -16,7 +16,7 @@ Each function owns its LocalST, and shares both the GlobalST and LocalST with it
 #include <iostream>
 
 void error(int line, std::string message) {
-    std::cout << "error [line " << line << "] " << message << "\n";
+    std::cout << "error [line " << line << "]: " << message << "\n";
 }
 
 ASTNode::ASTNode(int line) :lineno(line) {}
@@ -458,7 +458,6 @@ std::string IdentifierNode::get_lexeme() {
     return lexeme;
 }
 
-
 Literal* IdentifierNode::getValue() {
     IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
     if(info) { // identifier exists in local symbol table
@@ -474,6 +473,17 @@ Literal* IdentifierNode::getValue() {
         std::cout << "error [line " << lineno << "]: " << "Identifier '" << lexeme << "' not found.\n";
     }
     return nullptr;
+}
+
+Type IdentifierNode::getType() {
+    IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
+    if(info) {
+        return info->getReturnType();
+    }
+    else {
+        error(lineno, "identifier '" + lexeme + "' not found.");
+    }
+    return Type::none;
 }
 
 void IdentifierNode::setValue(ExpressionNode* expr) {
