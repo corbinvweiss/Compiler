@@ -28,6 +28,9 @@ Bugs:
 - You can call an undefined function
 
 ---
+Next:
+- implement all types of function definitions
+---
 
 ## Function type checking
 ```
@@ -41,28 +44,8 @@ fn main() {
 --------
 Error [line 5]: Bad argument types. f expects (i32, bool, bool), but got (i32, i32, i32). 
 ```
-- implement assignment from identifiers
-- move UpdateSymbolTable to program level so that it has everything initialized first
 
 
 ## Next Steps
 - Remove type nodes once they have been put in the Symbol Table
 - implement TypeError as a class that inherits from std::runtime_error
-
-
-## Check
-1. Assignment of wrong type to a declared variable
-2. Using an undeclared variable
-3. Assigning to an undeclared 
-4. Use of an uninitialized variable
-5. Passing wrong types of actual args to function call
-6. Passign wrong number of args to function call
-7. Returning wrong type from function call (also returning something from a "void" function)
-8. Missing return from function declared to return i32 or bool
-9. Calling an undeclared function
-10. Mixed arithmetic (i32/bool)
-11. Airthmetic with bools
-12. Logical comparison with i32s
-13. Missing main function
-14. Missing let, mut, etc
-15. Non-i32 array indices

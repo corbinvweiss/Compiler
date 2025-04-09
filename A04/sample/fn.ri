@@ -5,6 +5,14 @@ fn f(x: i32, a: bool) -> bool {
 
 fn f(a: bool) -> bool {}
 
+fn empty() {} 
+
+fn args_only(num: i32, b: bool) {
+
+}
+
+fn return_only() -> i32 {}
+
 fn main() {
     let mut b: bool;
     let mut x: i32;

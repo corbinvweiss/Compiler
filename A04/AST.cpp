@@ -15,8 +15,10 @@ Each function owns its LocalST, and shares both the GlobalST and LocalST with it
 #include "AST.h"
 #include <iostream>
 
+int ERROR_COUNT;
 void error(int line, std::string message) {
     std::cout << "error [line " << line << "]: " << message << "\n";
+    ERROR_COUNT++;
 }
 
 ASTNode::ASTNode(int line) :lineno(line) {}
@@ -83,8 +85,10 @@ FuncDefNode::FuncDefNode(ASTNode* id, ASTNode* params, ASTNode* type, ASTNode* d
 : ASTNode(line)
 {
     identifier = static_cast<IdentifierNode*>(id);
-    params_list = static_cast<ParamsListNode*>(params);
-    return_type = static_cast<TypeNode*>(type);
+    if(params) params_list = static_cast<ParamsListNode*>(params);
+    else params_list = new ParamsListNode(line);    // empty parameter list
+    if(type) return_type = static_cast<TypeNode*>(type);
+    else return_type = new TypeNode(Type::none, line);
     local_decl_list = static_cast<LocalDeclListNode*>(decl_list);
     stmt_list = static_cast<StatementListNode*>(stmts);
     
@@ -92,6 +96,7 @@ FuncDefNode::FuncDefNode(ASTNode* id, ASTNode* params, ASTNode* type, ASTNode* d
     setLocalST(new SymbolTable());
     setType(return_type->getType());    // the type of the function is its return type.
 }
+
 FuncDefNode::~FuncDefNode() {
     delete identifier;
     delete params_list;
@@ -114,7 +119,6 @@ void FuncDefNode::TypeCheck() {
     LocalST->show();
     stmt_list->TypeCheck();
     LocalST->show();
-    // TODO: If the function has a return type 
     CheckReturn();
 }
 
@@ -143,6 +147,11 @@ ParamsListNode::ParamsListNode(ASTNode* param, int line)
 {
     parameters = new std::vector<VarDeclNode*> ();
     parameters->push_back(static_cast<VarDeclNode*>(param));
+}
+ParamsListNode::ParamsListNode(int line)
+: ASTNode(line)
+{
+    parameters = new std::vector<VarDeclNode*> ();
 }
 
 ParamsListNode::~ParamsListNode() {
@@ -322,6 +331,7 @@ AssignmentStatementNode::~AssignmentStatementNode() {
 }
 
 void AssignmentStatementNode::TypeCheck() {
+    expression->TypeCheck();
     identifier->setValue(expression);
     return;
 }
@@ -431,6 +441,7 @@ void CallNode::TypeCheck() {
     FunctionInfo* funcInfo = static_cast<FunctionInfo*>(GlobalST->lookup(lexeme));
     if(!funcInfo) { // the function is not defined
         error(lineno, "undefined function '" + lexeme + "'.");
+        return;
     }
     std::vector<Type> funcParams = funcInfo->getParamList();
 

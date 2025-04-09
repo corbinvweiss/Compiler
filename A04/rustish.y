@@ -61,6 +61,15 @@ func_def_list   : func_def_list func_def {
 func_def        : FN identifier LPAREN params_list RPAREN ARROW type LCURLY local_decl_list statement_list RCURLY {
                     $$ = new FuncDefNode($2, $4, $7, $9, $10, yylineno);
                 }
+                | FN identifier LPAREN params_list RPAREN LCURLY local_decl_list statement_list RCURLY {
+                    $$ = new FuncDefNode($2, $4, nullptr, $7, $8, yylineno);
+                }
+                | FN identifier LPAREN RPAREN ARROW type LCURLY local_decl_list statement_list RCURLY {
+                    $$ = new FuncDefNode($2, nullptr, $6, $8, $9, yylineno);
+                }
+                | FN identifier LPAREN RPAREN LCURLY local_decl_list statement_list RCURLY {
+                    $$ = new FuncDefNode($2, nullptr, nullptr, $6, $7, yylineno);
+                }
                 ;
 
 params_list     : params_list COMMA var_decl {

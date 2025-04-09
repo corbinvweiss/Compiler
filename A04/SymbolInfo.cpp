@@ -107,10 +107,13 @@ std::vector<Type> FunctionInfo::getParamList() {
 
 std::string FunctionInfo::show() {
     std::string repr = "(";
-    for(std::size_t i=0; i<param_list.size() - 1; ++i) {
-        repr += typeToString(param_list[i]) + ", ";
-    }
-    repr += typeToString(param_list[param_list.size() - 1]) + ")";
+    if(param_list.size()) {
+        for(std::size_t i=0; i<param_list.size() - 1; ++i) {
+            repr += typeToString(param_list[i]) + ", ";
+        }
+        repr += typeToString(param_list[param_list.size() - 1]);
+    } 
+    repr += ")";
     repr += " -> " + typeToString(getReturnType());
     return repr;
 }

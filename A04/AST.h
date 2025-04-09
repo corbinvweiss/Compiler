@@ -144,6 +144,7 @@ class ParamsListNode: public ASTNode {
     private: 
         std::vector<VarDeclNode*>* parameters;
     public:
+        ParamsListNode(int line);
         ParamsListNode(ASTNode* param, int line);
         ~ParamsListNode();
         void append(ASTNode* parameter);
