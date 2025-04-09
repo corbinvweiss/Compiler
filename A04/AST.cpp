@@ -364,6 +364,14 @@ void ActualArgsNode::setLocalST(SymbolTable* ST) {
     }
 }
 
+std::vector<Type> ActualArgsNode::argTypes() {
+    std::vector<Type> types = {};
+    for(ExpressionNode* arg : *actual_args) {
+        types.push_back(arg->getType());
+    }
+    return types;
+}
+
 CallNode::CallNode(ASTNode* id, ASTNode* act_args, int line) 
 : ExpressionNode(line)
 {
@@ -395,9 +403,31 @@ Type CallNode::getType() {
 }
 
 Literal* CallNode::getValue() {
+    argCheck();
     // todo: check for return type.
     // If returnType is not none, return the value of the return statement
     return nullptr;
+}
+
+void CallNode::argCheck() {
+    std::vector<Type> args = actual_args->argTypes();
+    std::string lexeme = identifier->get_lexeme();
+    FunctionInfo* funcInfo = static_cast<FunctionInfo*>(GlobalST->lookup(lexeme));
+    std::vector<Type> funcParams = funcInfo->getParamList();
+
+    if(args.size() != funcParams.size()) {
+        std::cout << "error [line " << lineno << "]: Wrong number of arguments. "
+        << "Expected " << funcParams.size() << " but got " << args.size() << ".\n";
+    }
+    else {
+        for(std::size_t i=0; i<funcParams.size(); ++i) {
+            if(funcParams[i] != args[i]) {
+                std::cout << "error [line " << lineno << "]: Wrong type of arguments. "
+                << "Expected " << typeToString(funcParams) << " but got " << typeToString(args) << ".\n";
+            }
+        }
+    }
+
 }
 
 IdentifierNode::IdentifierNode(std::string lexeme, int line)

@@ -8,4 +8,7 @@ fn main() {
     let mut x: i32;
     b = f(1, false);
     x = f(1, false);
+    b = f(1, 1);
+    b = f(1, 2, 3);
+    b = f(1, false, 17);
 }

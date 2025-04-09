@@ -175,6 +175,7 @@ class ActualArgsNode: public ASTNode {
         void append(ASTNode* arg);
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
+        std::vector<Type> argTypes();
 };
 
 class CallNode: public ExpressionNode {
@@ -188,6 +189,7 @@ class CallNode: public ExpressionNode {
         void setLocalST(SymbolTable* ST) override;
         Type getType() override;
         Literal* getValue() override;
+        void argCheck();
 };
 
 class FuncDefListNode: public ASTNode {

@@ -32,6 +32,7 @@ enum Type {
 using Literal = std::variant<int, bool>;
 
 std::string typeToString(Type t);
+std::string typeToString(std::vector<Type> types);
 std::string LiteralToString(Type t, Literal l);
 
 /*

@@ -24,6 +24,15 @@ std::string typeToString(Type t) {
     return "Unknown Type";
 }
 
+std::string typeToString(std::vector<Type> types) {
+    std::string result = "(";
+    for(std::size_t i=0; i < types.size() - 1; ++i) {
+        result += typeToString(types[i]) + ", ";
+    }
+    result += typeToString(types[types.size() - 1]) + ")";
+    return result;
+}
+
 std::string LiteralToString(Type type, Literal value) {
     std::string val = "";
     if(type==Type::i32 && std::holds_alternative<int>(value)) {
