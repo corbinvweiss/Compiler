@@ -15,6 +15,10 @@ Each function owns its LocalST, and shares both the GlobalST and LocalST with it
 #include "AST.h"
 #include <iostream>
 
+void error(int line, std::string message) {
+    std::cout << "error [line " << line << "] " << message << "\n";
+}
+
 ASTNode::ASTNode(int line) :lineno(line) {}
 
 ProgramNode::ProgramNode(ASTNode* func_list, ASTNode* main) 
@@ -23,8 +27,8 @@ ProgramNode::ProgramNode(ASTNode* func_list, ASTNode* main)
     func_def_list = static_cast<FuncDefListNode*>(func_list);
     main_def = static_cast<MainDefNode*>(main);
     setGlobalST(new SymbolTable());
-    func_def_list->UpdateSymbolTable();
-    main_def->UpdateSymbolTable();
+    func_def_list->TypeCheck();
+    main_def->TypeCheck();
 }
 
 ProgramNode::~ProgramNode() {
@@ -68,10 +72,10 @@ void MainDefNode::setLocalST(SymbolTable* ST) {
     stmt_list->setLocalST(ST);
 }
 
-void MainDefNode::UpdateSymbolTable() {
-    local_decl_list->UpdateSymbolTable();
+void MainDefNode::TypeCheck() {
+    local_decl_list->TypeCheck();
     LocalST->show();
-    stmt_list->UpdateSymbolTable();
+    stmt_list->TypeCheck();
     LocalST->show();
 }
 
@@ -95,17 +99,31 @@ FuncDefNode::~FuncDefNode() {
     delete local_decl_list;
     delete stmt_list;
 }
-void FuncDefNode::UpdateSymbolTable() {
-    std::cout << "Adding function " << identifier->get_lexeme() << " to global symbol table\n";
+void FuncDefNode::TypeCheck() {
     std::string lexeme = identifier->get_lexeme();
     FunctionInfo* info = new FunctionInfo(getType(), params_list->getTypes());
-    GlobalST->insert(lexeme, info);
-    GlobalST->show();
-    std::cout << "Creating symbol table for function " << identifier->get_lexeme() << "\n";
-    local_decl_list->UpdateSymbolTable();
+    int valid = GlobalST->insert(lexeme, info);
+    if(valid) {
+        GlobalST->show();
+        std::cout << "Adding function " << lexeme << " to the symbol table.\n";
+    }
+    else {
+        error(lineno, "function '" + lexeme + "' already defined.");
+    }
+    local_decl_list->TypeCheck();
     LocalST->show();
-    stmt_list->UpdateSymbolTable();
+    stmt_list->TypeCheck();
     LocalST->show();
+    // TODO: If the function has a return type 
+    CheckReturn();
+}
+
+void FuncDefNode::CheckReturn() {
+    // If the function has a return type 
+    // make sure it has a return statement that returns that type
+    // and no return statements that return different types
+    // if the function has no return type
+    // make sure there is no return statement that returns a type
 }
 
 void FuncDefNode::setGlobalST(SymbolTable* ST) {
@@ -161,9 +179,9 @@ void FuncDefListNode::append(ASTNode* func_def) {
     func_def_list->push_back(static_cast<FuncDefNode*>(func_def));
 }
 
-void FuncDefListNode::UpdateSymbolTable() {
+void FuncDefListNode::TypeCheck() {
     for(FuncDefNode* func_def : *func_def_list) {
-        func_def->UpdateSymbolTable();
+        func_def->TypeCheck();
     }
 }
 
@@ -198,9 +216,9 @@ void LocalDeclListNode::append(ASTNode* decl) {
     decl_list->push_back(static_cast<VarDeclNode*>(decl));
 }
 
-void LocalDeclListNode::UpdateSymbolTable() {
+void LocalDeclListNode::TypeCheck() {
     for(VarDeclNode* declaration : *decl_list) {
-        declaration->UpdateSymbolTable();
+        declaration->TypeCheck();
     }
 }
 
@@ -229,7 +247,7 @@ VarDeclNode::~VarDeclNode() {
     delete identifier;
     delete type;
 }
-void VarDeclNode::UpdateSymbolTable() {
+void VarDeclNode::TypeCheck() {
     std::string lexeme = identifier->get_lexeme();
     IdentifierInfo* info = new IdentifierInfo(getType());
     int valid = LocalST->insert(lexeme, info);
@@ -268,11 +286,11 @@ void StatementListNode::append(ASTNode* stmt) {
     stmt_list->push_back(stmt);
 }
 
-void StatementListNode::UpdateSymbolTable() {
+void StatementListNode::TypeCheck() {
     // std::cout << "in StatementListNode::UpdateSymbolTable\n";
     for(ASTNode* stmt : *stmt_list) {
         // std::cout << "iterating next statement\n";
-        stmt->UpdateSymbolTable();
+        stmt->TypeCheck();
     }
 }
 
@@ -303,8 +321,7 @@ AssignmentStatementNode::~AssignmentStatementNode() {
     delete expression;
 }
 
-void AssignmentStatementNode::UpdateSymbolTable() {
-
+void AssignmentStatementNode::TypeCheck() {
     identifier->setValue(expression);
     return;
 }
@@ -403,21 +420,24 @@ Type CallNode::getType() {
 }
 
 Literal* CallNode::getValue() {
-    argCheck();
     // todo: check for return type.
     // If returnType is not none, return the value of the return statement
     return nullptr;
 }
 
-void CallNode::argCheck() {
+void CallNode::TypeCheck() {
     std::vector<Type> args = actual_args->argTypes();
     std::string lexeme = identifier->get_lexeme();
     FunctionInfo* funcInfo = static_cast<FunctionInfo*>(GlobalST->lookup(lexeme));
+    if(!funcInfo) { // the function is not defined
+        error(lineno, "undefined function '" + lexeme + "'.");
+    }
     std::vector<Type> funcParams = funcInfo->getParamList();
 
+
     if(args.size() != funcParams.size()) {
-        std::cout << "error [line " << lineno << "]: Wrong number of arguments. "
-        << "Expected " << funcParams.size() << " but got " << args.size() << ".\n";
+        std::string msg = "wrong number of arguments: expected " + std::to_string(funcParams.size()) + " but got " + std::to_string(args.size())+ ".";
+        error(lineno, msg);
     }
     else {
         for(std::size_t i=0; i<funcParams.size(); ++i) {
@@ -427,7 +447,6 @@ void CallNode::argCheck() {
             }
         }
     }
-
 }
 
 IdentifierNode::IdentifierNode(std::string lexeme, int line)

@@ -3,12 +3,15 @@ fn f(x: i32, a: bool) -> bool {
     a = 5;
 }
 
+fn f(a: bool) -> bool {}
+
 fn main() {
     let mut b: bool;
     let mut x: i32;
-    b = f(1, false);
-    x = f(1, false);
-    b = f(1, 1);
-    b = f(1, 2, 3);
-    b = f(1, false, 17);
+    b = f(1, false);    // correct function call
+    b = f(1, 1);        // wrong type ags
+    b = f(1, false, 3);     // too many args
+    b = f(1);           // too few args
+
+    g();
 }

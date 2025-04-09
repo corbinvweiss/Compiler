@@ -27,6 +27,8 @@ eol    \n
 {tab}       {}
 {eol}       {} 
 
+"//".*{eol} {}
+
 "let"       { return LET;}
 
 "mut"       { return MUT;}

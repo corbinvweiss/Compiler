@@ -30,7 +30,7 @@ class ASTNode {
         virtual ~ASTNode() = default;
         virtual void setGlobalST(SymbolTable* ST) {std::cout << "base setGlobalST\n"; };
         virtual void setLocalST(SymbolTable* ST) {std::cout << "base setLocalST\n"; };
-        virtual void UpdateSymbolTable() {std::cout << "base class UpdateSymbolTable\n"; };
+        virtual void TypeCheck() {std::cout << "base class UpdateSymbolTable\n"; };
 
         virtual void setType(Type t) {
             _type = t;
@@ -85,7 +85,7 @@ class VarDeclNode: public ASTNode {
     public:
         VarDeclNode(ASTNode* id, ASTNode* t, int line);
         ~VarDeclNode();
-        void UpdateSymbolTable() override;
+        void TypeCheck() override;
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
 };
@@ -97,7 +97,7 @@ class AssignmentStatementNode: public ASTNode {
     public:
         AssignmentStatementNode(ASTNode* identifier, ASTNode* expr, int line);
         ~AssignmentStatementNode();
-        void UpdateSymbolTable() override;
+        void TypeCheck() override;
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
 };
@@ -108,7 +108,7 @@ class StatementListNode: public ASTNode {
     public:
         StatementListNode(int line);
         ~StatementListNode();
-        void UpdateSymbolTable() override;
+        void TypeCheck() override;
         void append(ASTNode* stmt);
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
@@ -121,7 +121,7 @@ class LocalDeclListNode: public ASTNode {
         LocalDeclListNode(int lineno);
         LocalDeclListNode(ASTNode* decl, int line);
         ~LocalDeclListNode();
-        void UpdateSymbolTable() override;
+        void TypeCheck() override;
         void append(ASTNode* decl);
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
@@ -136,7 +136,7 @@ class MainDefNode: public ASTNode {
         ~MainDefNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
-        void UpdateSymbolTable() override;
+        void TypeCheck() override;
 };
 
 class ParamsListNode: public ASTNode {
@@ -162,7 +162,8 @@ class FuncDefNode: public ASTNode {
         ~FuncDefNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
-        void UpdateSymbolTable() override;
+        void TypeCheck() override;
+        void CheckReturn();
 };
 
 class ActualArgsNode: public ASTNode {
@@ -189,7 +190,7 @@ class CallNode: public ExpressionNode {
         void setLocalST(SymbolTable* ST) override;
         Type getType() override;
         Literal* getValue() override;
-        void argCheck();
+        void TypeCheck() override;
 };
 
 class FuncDefListNode: public ASTNode {
@@ -199,7 +200,7 @@ class FuncDefListNode: public ASTNode {
         FuncDefListNode(int line);
         ~FuncDefListNode();
         void append(ASTNode* func_def);
-        void UpdateSymbolTable() override;
+        void TypeCheck() override;
         void setGlobalST(SymbolTable* ST) override;
         // note: the list of function def's do not exist in a local symbol table 
 };
