@@ -409,6 +409,9 @@ void AssignmentStatementNode::TypeCheck() {
             std::cout << "error [line " << lineno << "]: Cannot assign '" 
                 << typeToString(rtype) << "' to type '" << typeToString(info->getReturnType()) << "'.\n";
         }
+        else {
+            info->initialized = true;
+        }
     }
     else { // identifier not found because it has not been declared.
         std::cout << "error [line " << lineno << "]: Identifier '" << lexeme << "'" << " not declared.\n";
@@ -569,6 +572,38 @@ void IfStatementNode::TypeCheck() {
     }
 }
 
+WhileStatementNode::WhileStatementNode(ASTNode* expr, ASTNode* stmts, int line)
+: ASTNode(line)
+{
+    expression = expr;
+    body = static_cast<StatementListNode*>(stmts);
+}
+
+WhileStatementNode::~WhileStatementNode() {
+    delete expression;
+    delete body;
+}
+
+void WhileStatementNode::setGlobalST(SymbolTable* ST) {
+    GlobalST = ST;
+    expression->setGlobalST(ST);
+    body->setGlobalST(ST);
+}
+
+void WhileStatementNode::setLocalST(SymbolTable* ST) {
+    LocalST = ST;
+    expression->setLocalST(ST);
+    body->setLocalST(ST);
+}
+
+void WhileStatementNode::TypeCheck() {
+    expression->TypeCheck();
+    if(expression->getType() != Type::Bool) {
+        error(lineno, "expected boolean condition but got '" + typeToString(expression->getType()) + "'.");
+    }
+    body->TypeCheck();
+}
+
 BinaryNode::BinaryNode(std::string oper, ASTNode* l, ASTNode* r, int line)
 : ASTNode(line)
 {
@@ -657,9 +692,6 @@ Type IdentifierNode::getType() {
     IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
     if(info) {
         return info->getReturnType();
-    }
-    else {
-        error(lineno, "identifier '" + lexeme + "' not found.");
     }
     return Type::none;
 }

@@ -1,0 +1,10 @@
+fn main() {
+    let mut a: i32;
+    a = 0;
+    while a < 10 {
+        a = a + 1;
+    }
+    while 10 {
+        a = d;
+    }
+}

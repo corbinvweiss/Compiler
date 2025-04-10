@@ -131,6 +131,9 @@ statement       : identifier ASSIGN expression SEMICOLON {
                     ELSE LCURLY statement_list RCURLY {
                     $$ = new IfStatementNode($2, $4, $8, yylineno);
                 }
+                | WHILE expression LCURLY statement_list RCURLY {
+                    $$ = new WhileStatementNode($2, $4, yylineno);
+                }
                 ;
 
 func_call_expression : identifier LPAREN actual_args RPAREN {

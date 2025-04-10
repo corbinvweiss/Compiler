@@ -247,6 +247,18 @@ class IfStatementNode: public ASTNode {
         void TypeCheck() override;
 };
 
+class WhileStatementNode: public ASTNode {
+    private:
+        ASTNode* expression;
+        StatementListNode* body;
+    public:
+        WhileStatementNode(ASTNode* expr, ASTNode* body, int line);
+        ~WhileStatementNode();
+        void setGlobalST(SymbolTable* ST) override;
+        void setLocalST(SymbolTable* ST) override;
+        void TypeCheck() override;
+};
+
 class BinaryNode : public ASTNode {
     private:
         std::string op;

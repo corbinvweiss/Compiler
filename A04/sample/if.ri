@@ -7,7 +7,7 @@ fn g() -> i32 {
 }
 
 fn main() {
-    if 5 < 7 {
+    if 5 {
         2 + 2;
     }
     else {
