@@ -8,6 +8,7 @@ Define the abstract SymbolInfo data structure and its children FunctionInfo and 
 
 #include <string>
 #include <vector>
+#define UNKNOWN_ARR INT_MAX
 
 enum TypeError {
     None,
@@ -30,40 +31,49 @@ enum Type {
     any
 };
 
+
+struct TypeInfo {
+    Type type;
+    int size;
+    TypeInfo(Type t, int sz)
+    : type(t), size(sz) {}
+    TypeInfo(Type t)
+    : type(t), size(0) {}
+};
+
 using Literal = std::variant<int, bool>;
 
-std::string typeToString(Type t);
-std::string typeToString(std::vector<Type> types);
-std::string LiteralToString(Type t, Literal l);
+std::string typeToString(TypeInfo t);
+std::string typeToString(std::vector<TypeInfo> types);
+std::string LiteralToString(TypeInfo t, Literal l);
 
 /*
 Abstract base class defining structure of SymbolTable entry
 */
 class SymbolInfo {
     private:
-        Type return_type = Type::none;
+        TypeInfo return_type = TypeInfo(Type::none);
     public:
-        SymbolInfo(Type returnType);
-        Type getReturnType();
+        SymbolInfo(TypeInfo returnType);
+        TypeInfo getReturnType();
         virtual std::string show() = 0; // display the symbol info in a human-readable format
 };
 
 class IdentifierInfo : public SymbolInfo {
     public:
         bool initialized;
-        IdentifierInfo(Type t);
+        IdentifierInfo(TypeInfo t);
         std::string show();
 };
 
 class FunctionInfo : public SymbolInfo {
     private:
-        std::vector<Type> param_list;
+        std::vector<TypeInfo> param_list;
     public:
-        FunctionInfo(Type returnType, std::vector<Type> paramTypes);
+        FunctionInfo(TypeInfo returnType, std::vector<TypeInfo> paramTypes);
         // check for type mismatch between function signature and arguments
         // Return ArgNumber, ArgType, or None
-        TypeError typeError(std::vector<Type> argTypes); 
-        std::vector<Type> getParamList();
+        std::vector<TypeInfo> getParamList();
         std::string show();
         
 };

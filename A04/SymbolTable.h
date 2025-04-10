@@ -8,6 +8,7 @@
 
 #include <map>
 #include <string>
+#include <variant>
 #include "SymbolInfo.h"
 
 

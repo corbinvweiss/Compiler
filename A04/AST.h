@@ -19,9 +19,9 @@ The owners of the symbol tables create them and share them with their children u
 #include <iostream>
 
 struct OpType {
-    Type op_type;
-    Type return_type;
-    OpType(Type op, Type re)
+    TypeInfo op_type;
+    TypeInfo return_type;
+    OpType(TypeInfo op, TypeInfo re)
         :op_type(op), return_type(re) {}
 };
 
@@ -55,7 +55,7 @@ static OpType GetOpType(std::string op) {
 
 class ASTNode {
     private:
-        Type _type = Type::none;
+        TypeInfo _type = Type::none;
     public:
         int lineno;
         SymbolTable* GlobalST;
@@ -68,27 +68,38 @@ class ASTNode {
         virtual void TypeCheck() {};
         virtual ASTNode* FindReturn() {return nullptr;}
 
-        virtual void setType(Type t) {
+        virtual void setType(TypeInfo t) {
             _type = t;
         }
-        virtual Type getType() {
+        virtual TypeInfo getType() {
             return _type;
         }
         
 };
 
-class LiteralNode: public ASTNode {
+class NumberNode: public ASTNode {
     private:
-        Literal* value = new Literal();
+        int value;
     public:
-        LiteralNode(int value, int line);
-        LiteralNode(bool value, int line);
-        ~LiteralNode();
+        NumberNode(int value, int line);
+        NumberNode(bool value, int line);
+        ~NumberNode();
+        int getValue();
+};
+
+class BoolNode: public ASTNode {
+    private:
+        bool value;
+    public:
+        BoolNode(int value, int line);
+        BoolNode(bool value, int line);
+        ~BoolNode();
+        bool getValue();
 };
 
 class TypeNode: public ASTNode {
     public:
-        TypeNode(Type t, int line);
+        TypeNode(TypeInfo t, int line);
         ~TypeNode();
 };
 
@@ -99,7 +110,7 @@ class IdentifierNode: public ASTNode {
         std::string get_lexeme();
         IdentifierNode(std::string id, int line);
         ~IdentifierNode();
-        Type getType() override;
+        TypeInfo getType() override;
         void TypeCheck() override;
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
@@ -115,6 +126,20 @@ class VarDeclNode: public ASTNode {
         void TypeCheck() override;
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
+};
+
+class ArrayDeclNode: public ASTNode {
+    private:
+        IdentifierNode* identifier;
+        TypeNode* type;
+        NumberNode* length;
+    public:
+        ArrayDeclNode(ASTNode* id, ASTNode* tp, ASTNode* len, int line);
+        ~ArrayDeclNode();
+        void TypeCheck() override;
+        void setGlobalST(SymbolTable* ST) override;
+        void setLocalST(SymbolTable* ST) override;
+
 };
 
 class AssignmentStatementNode: public ASTNode {
@@ -175,7 +200,7 @@ class ParamsListNode: public ASTNode {
         ParamsListNode(ASTNode* param, int line);
         ~ParamsListNode();
         void append(ASTNode* parameter);
-        std::vector<Type> getTypes();   // return the types of the parameters
+        std::vector<TypeInfo> getTypes();   // return the types of the parameters
         void setLocalST(SymbolTable* ST) override;
         // note: the parameters of a function do not need a global symbol table
         void TypeCheck() override;      // populate the parameters into the local symbol table
@@ -219,7 +244,7 @@ class ActualArgsNode: public ASTNode {
         void append(ASTNode* arg);
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
-        std::vector<Type> argTypes();
+        std::vector<TypeInfo> argTypes();
 };
 
 class CallNode: public ASTNode {
@@ -231,7 +256,7 @@ class CallNode: public ASTNode {
         ~CallNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
-        Type getType() override;
+        TypeInfo getType() override;
         void TypeCheck() override;
 };
 
@@ -295,7 +320,7 @@ class BinaryNode : public ASTNode {
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
         void TypeCheck() override;
-        bool BoolInt(Type t);
+        bool BoolInt(TypeInfo t);
 };
 
 class FuncDefListNode: public ASTNode {

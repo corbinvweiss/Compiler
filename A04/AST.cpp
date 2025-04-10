@@ -21,8 +21,6 @@ void error(int line, std::string message) {
     ERROR_COUNT++;
 }
 
-
-
 ASTNode::ASTNode(int line) :lineno(line) {}
 
 ProgramNode::ProgramNode(ASTNode* func_list, ASTNode* main) 
@@ -135,7 +133,7 @@ void FuncDefNode::TypeCheck() {
 void FuncDefNode::CheckReturn() {
     std::vector<ASTNode*> return_stmts = stmt_list->FindReturns();
     // expected return type but got no return statements
-    if(getType() != Type::none && return_stmts.empty()) {
+    if(getType().type != Type::none && return_stmts.empty()) {
         error(lineno, "function '" + identifier->get_lexeme() + 
         "' missing return of type '" + typeToString(getType()) + "'.");
     }
@@ -143,7 +141,7 @@ void FuncDefNode::CheckReturn() {
         for(ASTNode* return_stmt: return_stmts) {
             if(return_stmt) {
                 // expected void or some type, got something else
-                if(getType() != return_stmt->getType()) {
+                if(getType().type != return_stmt->getType().type) {
                     error(return_stmt->lineno, "function '" + identifier->get_lexeme() + "' expected return of type '"  + 
                     typeToString(getType()) + "' but got return of type '" + typeToString(return_stmt->getType()) + "'.");
                 }
@@ -207,8 +205,8 @@ void ParamsListNode::append(ASTNode* param) {
     parameters->push_back(static_cast<VarDeclNode*>(param));
 }
 
-std::vector<Type> ParamsListNode::getTypes() {
-    std::vector<Type> types = {};
+std::vector<TypeInfo> ParamsListNode::getTypes() {
+    std::vector<TypeInfo> types = {};
     for(VarDeclNode* param: *parameters) {
         types.push_back(param->getType());
     }
@@ -333,6 +331,47 @@ void VarDeclNode::setLocalST(SymbolTable* ST) {
     identifier->setLocalST(ST);
 }
 
+ArrayDeclNode::ArrayDeclNode(ASTNode* id, ASTNode* tp, ASTNode* len, int line)
+: ASTNode(line) {
+    identifier = static_cast<IdentifierNode*>(id);
+    type = static_cast<TypeNode*>(tp);
+    length = static_cast<NumberNode*>(len);
+    int size = length->getValue();
+    if(type->getType().type == Type::i32) {
+        setType(TypeInfo(Type::array_i32, size));
+    }
+    else if(type->getType().type == Type::Bool) {
+        setType(TypeInfo(Type::array_bool, size));
+    }
+}
+
+ArrayDeclNode::~ArrayDeclNode() {
+    delete identifier;
+    delete type;
+    delete length;
+}
+
+void ArrayDeclNode::setGlobalST(SymbolTable* ST) {
+    GlobalST = ST;
+}
+
+void ArrayDeclNode::setLocalST(SymbolTable* ST) {
+    LocalST = ST;
+}
+
+void ArrayDeclNode::TypeCheck() {
+    std::string lexeme = identifier->get_lexeme();
+    IdentifierInfo* info = new IdentifierInfo(getType());
+    int valid = LocalST->insert(lexeme, info);
+    if(valid) {
+        std::cout << lexeme << " : " << typeToString(getType()) << '\n';
+    }
+    else {
+        error(lineno, "identifier '" + lexeme + "' redeclared.");
+    }
+}
+
+
 StatementListNode::StatementListNode(int line)
 : ASTNode(line) 
 {
@@ -403,9 +442,9 @@ void AssignmentStatementNode::TypeCheck() {
     std::string lexeme = identifier->get_lexeme();
     IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
     if(info) {
-        Type rtype = expression->getType();
-        Type ltype = info->getReturnType();
-        if(ltype != rtype) {
+        TypeInfo rtype = expression->getType();
+        TypeInfo ltype = info->getReturnType();
+        if(!(ltype.type == rtype.type && ltype.size == rtype.size)) {
             std::cout << "error [line " << lineno << "]: Cannot assign '" 
                 << typeToString(rtype) << "' to type '" << typeToString(info->getReturnType()) << "'.\n";
         }
@@ -468,8 +507,8 @@ void ActualArgsNode::setLocalST(SymbolTable* ST) {
     }
 }
 
-std::vector<Type> ActualArgsNode::argTypes() {
-    std::vector<Type> types = {};
+std::vector<TypeInfo> ActualArgsNode::argTypes() {
+    std::vector<TypeInfo> types = {};
     for(ASTNode* arg : *actual_args) {
         types.push_back(arg->getType());
     }
@@ -500,28 +539,28 @@ void CallNode::setLocalST(SymbolTable* ST) {
     actual_args->setLocalST(ST);
 }
 
-Type CallNode::getType() {
+TypeInfo CallNode::getType() {
     std::string lexeme = identifier->get_lexeme();
     SymbolInfo* func = GlobalST->lookup(lexeme);
     return func->getReturnType();
 }
 
 void CallNode::TypeCheck() {
-    std::vector<Type> args = actual_args->argTypes();
+    std::vector<TypeInfo> args = actual_args->argTypes();
     std::string lexeme = identifier->get_lexeme();
     FunctionInfo* funcInfo = static_cast<FunctionInfo*>(GlobalST->lookup(lexeme));
     if(!funcInfo) { // the function is not defined
         error(lineno, "undefined function '" + lexeme + "'.");
         return;
     }
-    std::vector<Type> funcParams = funcInfo->getParamList();
+    std::vector<TypeInfo> funcParams = funcInfo->getParamList();
     if(args.size() != funcParams.size()) {
         std::string msg = "wrong number of arguments: expected " + std::to_string(funcParams.size()) + " but got " + std::to_string(args.size())+ ".";
         error(lineno, msg);
     }
     else {
         for(std::size_t i=0; i<funcParams.size(); ++i) {
-            if(funcParams[i] != args[i]) {
+            if(!(funcParams[i].type == args[i].type && funcParams[i].size == args[i].size)) {
                 std::cout << "error [line " << lineno << "]: Wrong type of arguments. "
                 << "Expected " << typeToString(funcParams) << " but got " << typeToString(args) << ".\n";
             }
@@ -563,7 +602,7 @@ void IfStatementNode::setLocalST(SymbolTable* ST) {
 
 void IfStatementNode::TypeCheck() {
     expression->TypeCheck();
-    if(expression->getType() != Type::Bool) {
+    if(expression->getType().type != Type::Bool) {
         error(lineno, "expected boolean condition but got '" + typeToString(expression->getType()) + "'.");
     }
     if_branch->TypeCheck();
@@ -598,7 +637,7 @@ void WhileStatementNode::setLocalST(SymbolTable* ST) {
 
 void WhileStatementNode::TypeCheck() {
     expression->TypeCheck();
-    if(expression->getType() != Type::Bool) {
+    if(expression->getType().type != Type::Bool) {
         error(lineno, "expected boolean condition but got '" + typeToString(expression->getType()) + "'.");
     }
     body->TypeCheck();
@@ -628,10 +667,10 @@ void PrintStatementNode::setLocalST(SymbolTable* ST) {
 void PrintStatementNode::TypeCheck() {
     actual_args->TypeCheck();
     // make sure all arguments are bools or ints
-    std::vector<Type> types = actual_args->argTypes();
-    for(Type type : types) {
-        if(!(type == Type::i32 || type == Type::Bool)) {
-            error(lineno, "cannot print type '" + typeToString(type) + "'.");
+    std::vector<TypeInfo> types = actual_args->argTypes();
+    for(TypeInfo typeInfo : types) {
+        if(!(typeInfo.type == Type::i32 || typeInfo.type == Type::Bool)) {
+            error(lineno, "cannot print type '" + typeToString(typeInfo) + "'.");
         }
     }
 }
@@ -661,8 +700,8 @@ void UnaryNode::setLocalST(SymbolTable* ST) {
 
 void UnaryNode::TypeCheck() {
     right->TypeCheck();
-    Type opType = GetOpType(op).op_type;
-    if(right->getType() != opType) {
+    TypeInfo opType = GetOpType(op).op_type;
+    if(right->getType().type != opType.type) {
         error(lineno, "cannot apply operator " + op + 
             " to type " + typeToString(right->getType()));
     }
@@ -695,8 +734,8 @@ void BinaryNode::setLocalST(SymbolTable* ST) {
     right->setLocalST(ST);
 }
 
-bool BinaryNode::BoolInt(Type t) {
-    if(t == Type::i32 || t == Type::Bool) {
+bool BinaryNode::BoolInt(TypeInfo t) {
+    if(t.type == Type::i32 || t.type == Type::Bool) {
         return true;
     }
     else {
@@ -708,23 +747,23 @@ bool BinaryNode::BoolInt(Type t) {
 void BinaryNode::TypeCheck() {
     left->TypeCheck();
     right->TypeCheck();
-    Type lType = left->getType();
-    Type rType = right->getType();
+    TypeInfo lType = left->getType();
+    TypeInfo rType = right->getType();
     // check that both operands are ints or bools
     if(!(BoolInt(lType) && BoolInt(rType))) {
         return;
     }
     // check that both operands are the same type
-    if(lType != rType) {
+    if(!(lType.type == rType.type && lType.size == rType.size)) {
         error(lineno, "incompatible types '" + typeToString(lType) + "' and '" + typeToString(rType) + "'.");
         return;
     }
     // check that both operands are compatible with the operator
-    Type opType = GetOpType(op).op_type;
-    if(lType != opType && opType != Type::any) {
+    TypeInfo opType = GetOpType(op).op_type;
+    if(lType.type != opType.type && opType.type != Type::any) {
         error(lineno, "ltype '" + typeToString(lType) + "' not compatible with operator '" + op + "'.");
     }
-    if(rType != opType && opType != Type::any) {
+    if(rType.type != opType.type && opType.type != Type::any) {
         error(lineno, "rtype '" + typeToString(rType) + "' not compatible with operator '" + op + "'.");
     }
 
@@ -753,7 +792,7 @@ void IdentifierNode::TypeCheck() {
     }
 }
 
-Type IdentifierNode::getType() {
+TypeInfo IdentifierNode::getType() {
     IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
     if(info) {
         return info->getReturnType();
@@ -769,23 +808,31 @@ void IdentifierNode::setLocalST(SymbolTable* ST) {
     LocalST = ST;
 }
 
-TypeNode::TypeNode(Type t, int line) 
+TypeNode::TypeNode(TypeInfo t, int line) 
 : ASTNode(line) 
 {
     setType(t);
 }
 TypeNode::~TypeNode() {}
 
-LiteralNode::LiteralNode(int val, int line)
+NumberNode::NumberNode(int val, int line)
 : ASTNode(line) 
 {
     setType(Type::i32);
-    value = new Literal(val);
+    value = val;
 }
-LiteralNode::LiteralNode(bool val, int line)
-: ASTNode(line)
+NumberNode::~NumberNode() {}
+int NumberNode::getValue() {
+    return value;
+}
+
+BoolNode::BoolNode(bool val, int line)
+: ASTNode(line) 
 {
     setType(Type::Bool);
-    value = new Literal(val);
+    value = val;
 }
-LiteralNode::~LiteralNode() {}
+BoolNode::~BoolNode() {}
+bool BoolNode::getValue() {
+    return value;
+}

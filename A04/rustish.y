@@ -101,6 +101,9 @@ local_decl_list : local_decl_list LET MUT var_decl SEMICOLON {
 var_decl        : identifier COLON type {
                     $$ = new VarDeclNode($1, $3, yylineno);
                 }
+                | identifier COLON LSQBRACK type SEMICOLON number RSQBRACK {
+                    $$ = new ArrayDeclNode($1, $4, $6, yylineno);
+                }
                 ;
 
 statement_list  : statement_list statement {
@@ -161,7 +164,10 @@ actual_args     : expression {
 expression      : func_call_expression {
                     $$ = $1;
                 }
-                | literal {
+                | number {
+                    $$ = $1;
+                }
+                | bool {
                     $$ = $1;
                 }
                 | identifier {
@@ -240,14 +246,16 @@ type            : I32 {
                 }
                 ;
 
-literal         : NUMBER {
-                    $$ = new LiteralNode(atoi(yytext), yylineno);
+number          : NUMBER {
+                    $$ = new NumberNode(atoi(yytext), yylineno);
                 }
-                | TRUE {
-                    $$ = new LiteralNode(true, yylineno);
+                ;
+
+bool            : TRUE {
+                    $$ = new BoolNode(true, yylineno);
                 }
                 | FALSE {
-                    $$ = new LiteralNode(false, yylineno);
+                    $$ = new BoolNode(false, yylineno);
                 }
                 ;
 

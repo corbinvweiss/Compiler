@@ -12,20 +12,30 @@ Implement the SymbolInfo, IdentifierInfo and FunctionInfo classes
 const char* typeNames[] = {
     "i32",
     "bool",
-    "[i32]",
-    "[bool]",
+    "[i32",
+    "[bool",
     "none",
     "any"
 };
 
-std::string typeToString(Type t) {
-    if (t >= Type::i32 && t <= Type::any) {
-        return typeNames[static_cast<int>(t)];
+std::string typeToString(TypeInfo t) {
+    if (t.type >= Type::i32 && t.type <= Type::Bool) {
+        return typeNames[static_cast<int>(t.type)];
+    }
+    else if(t.type >= Type::array_i32 && t.type <= Type::array_bool) {
+        std::string repr = typeNames[static_cast<int>(t.type)];
+        if(t.size < UNKNOWN_ARR) {  // sized array
+            repr += "; " + std::to_string(t.size) + "]";
+        }
+        else {  // unsized array
+            repr += "]";
+        }
+        return repr;
     }
     return "Unknown Type";
 }
 
-std::string typeToString(std::vector<Type> types) {
+std::string typeToString(std::vector<TypeInfo> types) {
     std::string result = "(";
     for(std::size_t i=0; i < types.size() - 1; ++i) {
         result += typeToString(types[i]) + ", ";
@@ -47,15 +57,15 @@ std::string LiteralToString(Type type, Literal value) {
 
 // **********************
 
-SymbolInfo::SymbolInfo(Type t) 
+SymbolInfo::SymbolInfo(TypeInfo t) 
 : return_type(t) {}
-Type SymbolInfo::getReturnType() {
+TypeInfo SymbolInfo::getReturnType() {
     return return_type;
 }
 
 // **************************
 
-IdentifierInfo::IdentifierInfo(Type t)
+IdentifierInfo::IdentifierInfo(TypeInfo t)
 : SymbolInfo(t) {}
 
 std::string IdentifierInfo::show() {
@@ -68,21 +78,11 @@ std::string IdentifierInfo::show() {
 
 // **************************
 
-FunctionInfo::FunctionInfo(Type returnType, std::vector<Type> paramTypes) 
+FunctionInfo::FunctionInfo(TypeInfo returnType, std::vector<TypeInfo> paramTypes) 
 : SymbolInfo(returnType), param_list(paramTypes) {}
 
-TypeError FunctionInfo::typeError(std::vector<Type> argTypes) {
-    if(param_list.size() != argTypes.size()) {
-        return TypeError::ArgNumber;
-    }
-    for(std::size_t i=0; i<param_list.size(); ++i) {
-        if(param_list[i] != argTypes[i]) {
-            return TypeError::ArgType;
-        }
-    }
-    return TypeError::None;
-}
-std::vector<Type> FunctionInfo::getParamList() {
+
+std::vector<TypeInfo> FunctionInfo::getParamList() {
     return param_list;
 }
 

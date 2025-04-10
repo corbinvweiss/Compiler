@@ -25,14 +25,11 @@ The following should cause errors:
 
 ---
 Bugs:
-
+- line numbers for if condition errors point to end of if else statement
 ---
 Next:
-- empty return statement;
-- error on line of return statement
-- if statemnt
-- while statement
-- print statement
+- unary operators
+- arrays
 
 ---
 
