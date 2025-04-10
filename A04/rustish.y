@@ -167,6 +167,9 @@ expression      : func_call_expression {
                 | identifier {
                     $$ = $1;
                 }
+                | unary {
+                    $$ = $1;
+                }
                 | binary {
                     $$ = $1;
                 }
@@ -210,6 +213,17 @@ binary          : expression PLUS expression {
                 }
                 | expression LT expression {
                     $$ = new BinaryNode("<", $1, $3, yylineno);
+                }
+
+                ;
+unary           : MINUS expression {
+                    $$ = new UnaryNode("-", $2, yylineno);
+                }
+                | PLUS expression {
+                    $$ = new UnaryNode("+", $2, yylineno);
+                }
+                | NOT expression {
+                    $$ = new UnaryNode("!", $2, yylineno);
                 }
                 ;
 

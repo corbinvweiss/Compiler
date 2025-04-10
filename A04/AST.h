@@ -41,6 +41,7 @@ static std::unordered_map<std::string, OpType> Operators =
     {">=", OpType(Type::i32, Type::Bool)},
     {"<", OpType(Type::i32, Type::Bool)},
     {">", OpType(Type::i32, Type::Bool)},
+    {"!", OpType(Type::Bool, Type::Bool)},
 };
 
 static OpType GetOpType(std::string op) {
@@ -269,6 +270,18 @@ class PrintStatementNode: public ASTNode {
     void setGlobalST(SymbolTable* ST) override;
     void setLocalST(SymbolTable* ST) override;
     void TypeCheck() override;
+};
+
+class UnaryNode : public ASTNode {
+    private:
+        std::string op;
+        ASTNode* right;
+    public:
+        UnaryNode(std::string op, ASTNode* r, int line);
+        ~UnaryNode();
+        void setGlobalST(SymbolTable* ST) override;
+        void setLocalST(SymbolTable* ST) override;
+        void TypeCheck() override;
 };
 
 class BinaryNode : public ASTNode {

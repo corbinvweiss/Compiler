@@ -637,6 +637,36 @@ void PrintStatementNode::TypeCheck() {
 }
 
 
+UnaryNode::UnaryNode(std::string oper, ASTNode* r, int line)
+: ASTNode(line) 
+{
+    op = oper;
+    right = r;
+    setType(GetOpType(op).return_type);
+}
+
+UnaryNode::~UnaryNode() {
+    delete right;
+}
+
+void UnaryNode::setGlobalST(SymbolTable* ST) {
+    GlobalST = ST;
+    right->setGlobalST(ST);
+}
+
+void UnaryNode::setLocalST(SymbolTable* ST) {
+    LocalST = ST;
+    right->setLocalST(ST);
+}
+
+void UnaryNode::TypeCheck() {
+    right->TypeCheck();
+    Type opType = GetOpType(op).op_type;
+    if(right->getType() != opType) {
+        error(lineno, "cannot apply operator " + op + 
+            " to type " + typeToString(right->getType()));
+    }
+}
 
 
 BinaryNode::BinaryNode(std::string oper, ASTNode* l, ASTNode* r, int line)
