@@ -58,19 +58,10 @@ class ASTNode {
         
 };
 
-// an expression is one that has a value
-class ExpressionNode: public ASTNode {
-    public:
-        ExpressionNode(int line);
-        ~ExpressionNode();
-        virtual Literal* getValue() = 0;
-};
-
-class LiteralNode: public ExpressionNode {
+class LiteralNode: public ASTNode {
     private:
         Literal* value = new Literal();
     public:
-        Literal* getValue() override;
         LiteralNode(int value, int line);
         LiteralNode(bool value, int line);
         ~LiteralNode();
@@ -82,16 +73,15 @@ class TypeNode: public ASTNode {
         ~TypeNode();
 };
 
-class IdentifierNode: public ExpressionNode {
+class IdentifierNode: public ASTNode {
     private:
         std::string lexeme;
     public:
         std::string get_lexeme();
         IdentifierNode(std::string id, int line);
         ~IdentifierNode();
-        Literal* getValue() override;
         Type getType() override;
-        void setValue(ExpressionNode* expr);
+        void TypeCheck() override;
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
 };
@@ -111,7 +101,7 @@ class VarDeclNode: public ASTNode {
 class AssignmentStatementNode: public ASTNode {
     private:
         IdentifierNode* identifier;
-        ExpressionNode* expression;
+        ASTNode* expression;
     public:
         AssignmentStatementNode(ASTNode* identifier, ASTNode* expr, int line);
         ~AssignmentStatementNode();
@@ -187,7 +177,7 @@ class FuncDefNode: public ASTNode {
 
 class ActualArgsNode: public ASTNode {
     private:
-        std::vector<ExpressionNode*>* actual_args;
+        std::vector<ASTNode*>* actual_args;
     public:
         ActualArgsNode(int line);
         ActualArgsNode(ASTNode* arg, int line);
@@ -198,7 +188,7 @@ class ActualArgsNode: public ASTNode {
         std::vector<Type> argTypes();
 };
 
-class CallNode: public ExpressionNode {
+class CallNode: public ASTNode {
     private:
         IdentifierNode* identifier;
         ActualArgsNode* actual_args;
@@ -208,21 +198,19 @@ class CallNode: public ExpressionNode {
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
         Type getType() override;
-        Literal* getValue() override;
         void TypeCheck() override;
 };
 
-class BinaryNode : public ExpressionNode {
+class BinaryNode : public ASTNode {
     private:
         std::string op;
-        ExpressionNode* left;
-        ExpressionNode* right;
+        ASTNode* left;
+        ASTNode* right;
     public:
         BinaryNode(std::string op, ASTNode* l, ASTNode* r, int line);
         ~BinaryNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
-        Literal* getValue() override;
         void TypeCheck() override;
 };
 

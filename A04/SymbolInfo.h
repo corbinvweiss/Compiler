@@ -48,12 +48,9 @@ class SymbolInfo {
 };
 
 class IdentifierInfo : public SymbolInfo {
-    private:
-        Literal* value = nullptr;
     public:
+        bool initialized;
         IdentifierInfo(Type t);
-        Literal* getValue();
-        TypeError setValue(Type rtype, Literal* rval); // set the value, returning if there is a type error
         std::string show();
 };
 

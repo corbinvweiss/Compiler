@@ -324,7 +324,7 @@ AssignmentStatementNode::AssignmentStatementNode(ASTNode* id, ASTNode* expr, int
 : ASTNode(line) 
 {
     identifier = static_cast<IdentifierNode*>(id);
-    expression = static_cast<ExpressionNode*>(expr);
+    expression = expr;
 }
 
 AssignmentStatementNode::~AssignmentStatementNode() {
@@ -334,8 +334,20 @@ AssignmentStatementNode::~AssignmentStatementNode() {
 
 void AssignmentStatementNode::TypeCheck() {
     expression->TypeCheck();
-    identifier->setValue(expression);
-    return;
+    // fetch the information for this identifier from the LocalST
+    std::string lexeme = identifier->get_lexeme();
+    IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
+    if(info) {
+        Type rtype = expression->getType();
+        Type ltype = info->getReturnType();
+        if(ltype != rtype) {
+            std::cout << "error [line " << lineno << "]: Cannot assign '" 
+                << typeToString(rtype) << "' to type '" << typeToString(info->getReturnType()) << "'.\n";
+        }
+    }
+    else { // identifier not found because it has not been declared.
+        std::cout << "error [line " << lineno << "]: Identifier '" << lexeme << "'" << " not declared.\n";
+    }
 }
 
 void AssignmentStatementNode::setGlobalST(SymbolTable* ST) {
@@ -350,59 +362,54 @@ void AssignmentStatementNode::setLocalST(SymbolTable* ST) {
     expression->setLocalST(ST);
 }
 
-
-ExpressionNode::ExpressionNode(int line)
-: ASTNode(line) {}
-ExpressionNode::~ExpressionNode() {}
-
 ActualArgsNode::ActualArgsNode(int line) 
 : ASTNode(line) 
 {
-    actual_args = new std::vector<ExpressionNode*>();
+    actual_args = new std::vector<ASTNode*>();
 }
 
 ActualArgsNode::ActualArgsNode(ASTNode* arg, int line)
 : ASTNode(line) 
 {
-    actual_args = new std::vector<ExpressionNode*>();
-    actual_args->push_back(static_cast<ExpressionNode*>(arg));
+    actual_args = new std::vector<ASTNode*>();
+    actual_args->push_back(arg);
 }
 
 ActualArgsNode::~ActualArgsNode() {
-    for(ExpressionNode* arg : *actual_args) {
+    for(ASTNode* arg : *actual_args) {
         delete arg;
     }
 }
 
 void ActualArgsNode::append(ASTNode* arg) {
-    if(actual_args) actual_args->push_back(static_cast<ExpressionNode*>(arg));
+    if(actual_args) actual_args->push_back(arg);
     else std::cout << "no actual_args\n";
 }
 
 void ActualArgsNode::setGlobalST(SymbolTable* ST) {
     GlobalST = ST;
-    for(ExpressionNode* arg : *actual_args) {
+    for(ASTNode* arg : *actual_args) {
         arg->setGlobalST(ST);
     }
 }
 
 void ActualArgsNode::setLocalST(SymbolTable* ST) {
     LocalST = ST;
-    for(ExpressionNode* arg : *actual_args) {
+    for(ASTNode* arg : *actual_args) {
         arg->setLocalST(ST);
     }
 }
 
 std::vector<Type> ActualArgsNode::argTypes() {
     std::vector<Type> types = {};
-    for(ExpressionNode* arg : *actual_args) {
+    for(ASTNode* arg : *actual_args) {
         types.push_back(arg->getType());
     }
     return types;
 }
 
 CallNode::CallNode(ASTNode* id, ASTNode* act_args, int line) 
-: ExpressionNode(line)
+: ASTNode(line)
 {
     identifier = static_cast<IdentifierNode*>(id);
     actual_args = static_cast<ActualArgsNode*>(act_args);
@@ -431,12 +438,6 @@ Type CallNode::getType() {
     return func->getReturnType();
 }
 
-Literal* CallNode::getValue() {
-    // todo: check for return type.
-    // If returnType is not none, return the value of the return statement
-    return nullptr;
-}
-
 void CallNode::TypeCheck() {
     std::vector<Type> args = actual_args->argTypes();
     std::string lexeme = identifier->get_lexeme();
@@ -463,11 +464,11 @@ void CallNode::TypeCheck() {
 }
 
 BinaryNode::BinaryNode(std::string oper, ASTNode* l, ASTNode* r, int line)
-: ExpressionNode(line)
+: ASTNode(line)
 {
     op = oper;
-    left = static_cast<ExpressionNode*>(l);
-    right = static_cast<ExpressionNode*>(r);
+    left = l;
+    right = r;
     setType(Operators.find(op)->second);
 }
 
@@ -486,10 +487,6 @@ void BinaryNode::setLocalST(SymbolTable* ST) {
     GlobalST = ST;
     left->setLocalST(ST);
     right->setLocalST(ST);
-}
-
-Literal* BinaryNode::getValue() {
-    return nullptr;
 }
 
 void BinaryNode::TypeCheck() {
@@ -516,7 +513,7 @@ void BinaryNode::TypeCheck() {
 
 
 IdentifierNode::IdentifierNode(std::string lexeme, int line)
-    : ExpressionNode(line), lexeme(lexeme) {}
+    : ASTNode(line), lexeme(lexeme) {}
 
 IdentifierNode::~IdentifierNode() {}
 
@@ -524,13 +521,10 @@ std::string IdentifierNode::get_lexeme() {
     return lexeme;
 }
 
-Literal* IdentifierNode::getValue() {
+void IdentifierNode::TypeCheck() {
     IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
     if(info) { // identifier exists in local symbol table
-        if(info->getValue()) {  // identifier is initialized
-            return info->getValue(); 
-        }
-        else {
+        if(!info->initialized) {  // identifier is initialized
             std::cout << "error [line " << lineno << "]: " << "Identifier '" << lexeme << "' not initialized.\n";
         }
         
@@ -538,7 +532,6 @@ Literal* IdentifierNode::getValue() {
     else {
         std::cout << "error [line " << lineno << "]: " << "Identifier '" << lexeme << "' not found.\n";
     }
-    return nullptr;
 }
 
 Type IdentifierNode::getType() {
@@ -550,25 +543,6 @@ Type IdentifierNode::getType() {
         error(lineno, "identifier '" + lexeme + "' not found.");
     }
     return Type::none;
-}
-
-void IdentifierNode::setValue(ExpressionNode* expr) {
-    Type rtype = expr->getType();
-    Literal* rval = expr->getValue();
-    // fetch the existing information for this identifier from the LocalST
-    IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
-    if(!info) { // identifier not found because it has not been declared.
-        std::cout << "error [line " << lineno << "]: Identifier '" << lexeme << "'" << " not declared.\n";
-        return;
-    }
-    TypeError err = info->setValue(rtype, rval);
-    if(err == TypeError::Assignment) {
-        std::cout << "error [line " << lineno << "]: Cannot assign '" 
-            << typeToString(rtype) << "' to type '" << typeToString(info->getReturnType()) << "'.\n";
-    }
-    if(err == TypeError::RValue) {
-        std::cout << "error [line " << lineno << "]: Undefined R Value.\n";
-    }
 }
 
 void IdentifierNode::setGlobalST(SymbolTable* ST) {
@@ -587,18 +561,15 @@ TypeNode::TypeNode(Type t, int line)
 TypeNode::~TypeNode() {}
 
 LiteralNode::LiteralNode(int val, int line)
-: ExpressionNode(line) 
+: ASTNode(line) 
 {
     setType(Type::i32);
     value = new Literal(val);
 }
 LiteralNode::LiteralNode(bool val, int line)
-: ExpressionNode(line)
+: ASTNode(line)
 {
     setType(Type::Bool);
     value = new Literal(val);
 }
 LiteralNode::~LiteralNode() {}
-Literal* LiteralNode::getValue() {
-    return value;
-}

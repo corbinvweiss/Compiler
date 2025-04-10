@@ -57,32 +57,12 @@ Type SymbolInfo::getReturnType() {
 IdentifierInfo::IdentifierInfo(Type t)
 : SymbolInfo(t) {}
 
-Literal* IdentifierInfo::getValue() {
-    return value;
-}
-
-TypeError IdentifierInfo::setValue(Type rtype, Literal* rval) {
-    if(getReturnType() != rtype) {
-        return TypeError::Assignment;
-    }
-    if(rval) {
-        value = rval;
-        return TypeError::None;
-    }
-    else {
-        return TypeError::RValue;
-    }
-}
-
 std::string IdentifierInfo::show() {
-    std::string val = "";
-    if(value) {
-        val = LiteralToString(getReturnType(), *value);
+    std::string init = "undefined";
+    if(initialized) {
+        init = "initialized";
     }
-    else {
-        val = "undefined";
-    }
-    return typeToString(getReturnType()) + " = " + val;
+    return typeToString(getReturnType()) + " = " + init;
 }
 
 // **************************
