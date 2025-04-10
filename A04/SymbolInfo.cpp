@@ -10,15 +10,16 @@ Implement the SymbolInfo, IdentifierInfo and FunctionInfo classes
 #include "SymbolInfo.h"
 
 const char* typeNames[] = {
-    "none",
     "i32",
     "bool",
     "[i32]",
-    "[bool]"
+    "[bool]",
+    "none",
+    "any"
 };
 
 std::string typeToString(Type t) {
-    if (t >= Type::none && t <= Type::array_bool) {
+    if (t >= Type::i32 && t <= Type::any) {
         return typeNames[static_cast<int>(t)];
     }
     return "Unknown Type";

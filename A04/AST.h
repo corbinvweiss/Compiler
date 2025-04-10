@@ -18,22 +18,39 @@ The owners of the symbol tables create them and share them with their children u
 #include "SymbolTable.h"
 #include <iostream>
 
-// Operators used to check types of operands
-static std::unordered_map<std::string, Type> Operators = 
-{
-    {"+", Type::i32},
-    {"-", Type::i32},
-    {"*", Type::i32},
-    {"/", Type::i32},
-    {"&&", Type::Bool},
-    {"||", Type::Bool},
-    {"==", Type::none}, // equality works on bools and i32s so we pass none as the type
-    {"!=", Type::none}, // not eq also works on bools and i32s
-    {"<=", Type::i32},
-    {">=", Type::i32},
-    {"<", Type::i32},
-    {">", Type::i32},
+struct OpType {
+    Type op_type;
+    Type return_type;
+    OpType(Type op, Type re)
+        :op_type(op), return_type(re) {}
 };
+
+// Operators used to check types of operands
+static std::unordered_map<std::string, OpType> Operators = 
+{
+    {"+", OpType(Type::i32, Type::i32)},
+    {"-", OpType(Type::i32, Type::i32)},
+    {"*", OpType(Type::i32, Type::i32)},
+    {"/", OpType(Type::i32, Type::i32)},
+    {"%", OpType(Type::i32, Type::i32)},
+    {"&&", OpType(Type::Bool, Type::Bool)},
+    {"||", OpType(Type::Bool, Type::Bool)},
+    {"==", OpType(Type::any, Type::Bool)}, // equality works on bools and i32s
+    {"!=", OpType(Type::any, Type::Bool)}, // not eq also works on bools and i32s
+    {"<=", OpType(Type::i32, Type::Bool)},
+    {">=", OpType(Type::i32, Type::Bool)},
+    {"<", OpType(Type::i32, Type::Bool)},
+    {">", OpType(Type::i32, Type::Bool)},
+};
+
+static OpType GetOpType(std::string op) {
+    if(Operators.find(op) != Operators.end()) {
+        return Operators.find(op)->second;
+    }
+    else return OpType(Type::none, Type::none);
+}
+
+// TODO: add return types from each of these
 
 class ASTNode {
     private:
@@ -212,6 +229,7 @@ class BinaryNode : public ASTNode {
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
         void TypeCheck() override;
+        bool BoolInt(Type t);
 };
 
 class FuncDefListNode: public ASTNode {

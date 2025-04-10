@@ -22,11 +22,12 @@ enum TypeError {
 };
 
 enum Type {
-    none,
     i32,
     Bool,
     array_i32,
     array_bool,
+    none,
+    any
 };
 
 using Literal = std::variant<int, bool>;

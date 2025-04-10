@@ -469,7 +469,7 @@ BinaryNode::BinaryNode(std::string oper, ASTNode* l, ASTNode* r, int line)
     op = oper;
     left = l;
     right = r;
-    setType(Operators.find(op)->second);
+    setType(GetOpType(op).return_type);
 }
 
 BinaryNode::~BinaryNode() {
@@ -489,24 +489,37 @@ void BinaryNode::setLocalST(SymbolTable* ST) {
     right->setLocalST(ST);
 }
 
+bool BinaryNode::BoolInt(Type t) {
+    if(t == Type::i32 || t == Type::Bool) {
+        return true;
+    }
+    else {
+        error(lineno, "cannot apply operator " + op + " to type " + typeToString(t));
+        return false;
+    }
+}
+
 void BinaryNode::TypeCheck() {
     left->TypeCheck();
     right->TypeCheck();
     Type lType = left->getType();
     Type rType = right->getType();
+    // check that both operands are ints or bools
+    if(!(BoolInt(lType) && BoolInt(rType))) {
+        return;
+    }
+    // check that both operands are the same type
     if(lType != rType) {
         error(lineno, "incompatible types '" + typeToString(lType) + "' and '" + typeToString(rType) + "'.");
+        return;
     }
-    else { 
-        if(getType() == Type::none) {
-            setType(lType);
-        }
-        if(lType != getType()) {
-            error(lineno, "ltype '" + typeToString(lType) + "' not compatible with operator '" + op + "'.");
-        }
-        if(rType != getType()) {
-            error(lineno, "rtype '" + typeToString(rType) + "' not compatible with operator '" + op + "'.");
-        }
+    // check that both operands are compatible with the operator
+    Type opType = GetOpType(op).op_type;
+    if(lType != opType && opType != Type::any) {
+        error(lineno, "ltype '" + typeToString(lType) + "' not compatible with operator '" + op + "'.");
+    }
+    if(rType != opType && opType != Type::any) {
+        error(lineno, "rtype '" + typeToString(rType) + "' not compatible with operator '" + op + "'.");
     }
 
 }
