@@ -3,6 +3,7 @@ fn f() {
 }
 
 fn g(a: i32, b: bool) -> bool {
+    return;
     return 5;
 }
 

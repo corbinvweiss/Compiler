@@ -144,7 +144,7 @@ void FuncDefNode::CheckReturn() {
             if(return_stmt) {
                 // expected void or some type, got something else
                 if(getType() != return_stmt->getType()) {
-                    error(lineno, "function '" + identifier->get_lexeme() + "' expected return of type '"  + 
+                    error(return_stmt->lineno, "function '" + identifier->get_lexeme() + "' expected return of type '"  + 
                     typeToString(getType()) + "' but got return of type '" + typeToString(return_stmt->getType()) + "'.");
                 }
             }
@@ -156,8 +156,16 @@ ReturnNode::ReturnNode(ASTNode* expr, int line)
 : ASTNode(line) 
 {
     expression = expr;
-    setType(expr->getType());
+    if(expr) {
+        setType(expr->getType());
+    }
+    else {
+        setType(Type::none);
+    }
 }
+
+ReturnNode::ReturnNode(int line)
+: ASTNode(line) {}
 
 ReturnNode::~ReturnNode() {
     delete expression;
@@ -165,12 +173,12 @@ ReturnNode::~ReturnNode() {
 
 void ReturnNode::setGlobalST(SymbolTable* ST) {
     GlobalST = ST;
-    expression->setGlobalST(ST);
+    if(expression) expression->setGlobalST(ST);
 }
 
 void ReturnNode::setLocalST(SymbolTable* ST) {
     LocalST = ST;
-    expression->setLocalST(ST);
+    if(expression) expression->setLocalST(ST);
 }
 
 ASTNode* ReturnNode::FindReturn() {

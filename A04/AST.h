@@ -201,6 +201,7 @@ class ReturnNode: public ASTNode {
         ASTNode* expression;
     public:
         ReturnNode(ASTNode* expr, int line);
+        ReturnNode(int line);
         ~ReturnNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;

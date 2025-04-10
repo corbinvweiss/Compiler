@@ -28,6 +28,11 @@ Bugs:
 
 ---
 Next:
+- empty return statement;
+- error on line of return statement
+- if statemnt
+- while statement
+- print statement
 
 ---
 
