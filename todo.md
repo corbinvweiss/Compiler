@@ -8,8 +8,8 @@ The following should cause errors:
 - [x] Attempt to call an undefined function
 - [x] Passing wrong types of actual arguments to function call
 - [x] Passing wrong number of arguments to function call
-- [ ] Returning wrong type from function call (also returning something from a "void" function)
-- [ ] Missing return from function declared to return i32 or bool
+- [x] Returning wrong type from function call (also returning something from a "void" function)
+- [x] Missing return from function declared to return i32 or bool
 - [x] Mixed arithmetic (i32/bool)
 - [x] Arithmetic with bools
 - [x] Logical comparison with i32s
@@ -20,15 +20,14 @@ The following should cause errors:
 - [x] Duplicate local variables
 - [ ] Non-Boolean expression in an if or while statement
 - [x] Variable declaration after executable code within a function definition
-- [ ] Using a "void" function as an rvalue 
+- [x] Using a "void" function as an rvalue 
 - [ ] 
 
 ---
 Bugs:
-- using an argument in a function gives a 'not declared' error
+
 ---
 Next:
-- function returns
 
 ---
 

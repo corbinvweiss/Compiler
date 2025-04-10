@@ -104,6 +104,21 @@ FuncDefNode::~FuncDefNode() {
     delete local_decl_list;
     delete stmt_list;
 }
+
+void FuncDefNode::setGlobalST(SymbolTable* ST) {
+    GlobalST = ST;
+    local_decl_list->setGlobalST(ST);
+    stmt_list->setGlobalST(ST);
+}
+
+void FuncDefNode::setLocalST(SymbolTable* ST) {
+    LocalST = ST;
+    params_list->setLocalST(ST);    // Share local ST with parameters
+    local_decl_list->setLocalST(ST);
+    stmt_list->setLocalST(ST);
+}
+
+
 void FuncDefNode::TypeCheck() {
     std::string lexeme = identifier->get_lexeme();
     FunctionInfo* info = new FunctionInfo(getType(), params_list->getTypes());
@@ -111,21 +126,13 @@ void FuncDefNode::TypeCheck() {
     if(!valid) {
         error(lineno, "function '" + lexeme + "' already defined.");
     }
+    params_list->TypeCheck();   // put parameters in local ST
     local_decl_list->TypeCheck();
     stmt_list->TypeCheck();
     CheckReturn();
 }
 
 void FuncDefNode::CheckReturn() {
-    // If the function has a return type 
-    // make sure it has a return statement that returns that type
-    // and no return statements that return different types
-    // if the function has no return type
-    // make sure there is no return statement that returns a type
-    // 1. recurse through the stmt_list to find a return statement
-    // 2. if there is a return statement, compare its return type with the return type of the function def.
-    // This requires that StatementList have a FindReturnStmt method
-    // 
     std::vector<ASTNode*> return_stmts = stmt_list->FindReturns();
     // expected return type but got no return statements
     if(getType() != Type::none && return_stmts.empty()) {
@@ -170,18 +177,6 @@ ASTNode* ReturnNode::FindReturn() {
     return this;
 }
 
-void FuncDefNode::setGlobalST(SymbolTable* ST) {
-    GlobalST = ST;
-    local_decl_list->setGlobalST(ST);
-    stmt_list->setGlobalST(ST);
-}
-
-void FuncDefNode::setLocalST(SymbolTable* ST) {
-    LocalST = ST;
-    local_decl_list->setLocalST(ST);
-    stmt_list->setLocalST(ST);
-}
-
 ParamsListNode::ParamsListNode(ASTNode* param, int line)
 : ASTNode(line)
 {
@@ -210,6 +205,18 @@ std::vector<Type> ParamsListNode::getTypes() {
         types.push_back(param->getType());
     }
     return types;
+}
+
+void ParamsListNode::setLocalST(SymbolTable* ST) {
+    for(VarDeclNode* param : *parameters) {
+        param->setLocalST(ST);
+    }
+}
+
+void ParamsListNode::TypeCheck() {
+    for(VarDeclNode* param: *parameters) {
+        param->TypeCheck();
+    }
 }
 
 FuncDefListNode::FuncDefListNode(int line) 

@@ -11,7 +11,8 @@ fn h(a: i32, b: bool) -> bool {
 }
 
 fn main() {
-    f();
+    let mut a: i32;
+    a = f();
     g(5, true);
     h(1, false);
 }

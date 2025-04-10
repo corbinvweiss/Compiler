@@ -175,7 +175,9 @@ class ParamsListNode: public ASTNode {
         ~ParamsListNode();
         void append(ASTNode* parameter);
         std::vector<Type> getTypes();   // return the types of the parameters
-        // note: the parameters of a function do not need symbol tables
+        void setLocalST(SymbolTable* ST) override;
+        // note: the parameters of a function do not need a global symbol table
+        void TypeCheck() override;      // populate the parameters into the local symbol table
 };
 
 class FuncDefNode: public ASTNode {
