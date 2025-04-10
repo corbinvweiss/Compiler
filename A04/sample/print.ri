@@ -1,0 +1,6 @@
+fn f() {}
+
+fn main() {
+    print(5, f());
+    println(true, false, 17);
+}

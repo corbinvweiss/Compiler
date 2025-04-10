@@ -604,6 +604,41 @@ void WhileStatementNode::TypeCheck() {
     body->TypeCheck();
 }
 
+PrintStatementNode::PrintStatementNode(ASTNode* args, bool ln, int line)
+: ASTNode(line)
+{
+    newline = ln;
+    actual_args = static_cast<ActualArgsNode*>(args);
+}
+
+PrintStatementNode::~PrintStatementNode() {
+    delete actual_args;
+}
+
+void PrintStatementNode::setGlobalST(SymbolTable* ST) {
+    GlobalST = ST;
+    actual_args->setGlobalST(ST);
+}
+
+void PrintStatementNode::setLocalST(SymbolTable* ST) {
+    LocalST = ST;
+    actual_args->setLocalST(ST);
+}
+
+void PrintStatementNode::TypeCheck() {
+    actual_args->TypeCheck();
+    // make sure all arguments are bools or ints
+    std::vector<Type> types = actual_args->argTypes();
+    for(Type type : types) {
+        if(!(type == Type::i32 || type == Type::Bool)) {
+            error(lineno, "cannot print type '" + typeToString(type) + "'.");
+        }
+    }
+}
+
+
+
+
 BinaryNode::BinaryNode(std::string oper, ASTNode* l, ASTNode* r, int line)
 : ASTNode(line)
 {
