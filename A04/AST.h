@@ -18,6 +18,23 @@ The owners of the symbol tables create them and share them with their children u
 #include "SymbolTable.h"
 #include <iostream>
 
+// Operators used to check types of operands
+static std::unordered_map<std::string, Type> Operators = 
+{
+    {"+", Type::i32},
+    {"-", Type::i32},
+    {"*", Type::i32},
+    {"/", Type::i32},
+    {"&&", Type::Bool},
+    {"||", Type::Bool},
+    {"==", Type::none}, // equality works on bools and i32s so we pass none as the type
+    {"!=", Type::none}, // not eq also works on bools and i32s
+    {"<=", Type::i32},
+    {">=", Type::i32},
+    {"<", Type::i32},
+    {">", Type::i32},
+};
+
 class ASTNode {
     private:
         Type _type = Type::none;
@@ -28,9 +45,9 @@ class ASTNode {
 
         ASTNode(int line);
         virtual ~ASTNode() = default;
-        virtual void setGlobalST(SymbolTable* ST) {std::cout << "base setGlobalST\n"; };
-        virtual void setLocalST(SymbolTable* ST) {std::cout << "base setLocalST\n"; };
-        virtual void TypeCheck() {std::cout << "base class UpdateSymbolTable\n"; };
+        virtual void setGlobalST(SymbolTable* ST) {};
+        virtual void setLocalST(SymbolTable* ST) {};
+        virtual void TypeCheck() {};
 
         virtual void setType(Type t) {
             _type = t;
@@ -191,6 +208,20 @@ class CallNode: public ExpressionNode {
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
         Type getType() override;
+        Literal* getValue() override;
+        void TypeCheck() override;
+};
+
+class BinaryNode : public ExpressionNode {
+    private:
+        std::string op;
+        ExpressionNode* left;
+        ExpressionNode* right;
+    public:
+        BinaryNode(std::string op, ASTNode* l, ASTNode* r, int line);
+        ~BinaryNode();
+        void setGlobalST(SymbolTable* ST) override;
+        void setLocalST(SymbolTable* ST) override;
         Literal* getValue() override;
         void TypeCheck() override;
 };

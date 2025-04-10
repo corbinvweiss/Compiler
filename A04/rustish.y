@@ -145,6 +145,50 @@ expression      : func_call_expression {
                 | identifier {
                     $$ = $1;
                 }
+                | binary {
+                    $$ = $1;
+                }
+                ;
+
+binary          : expression PLUS expression {
+                    $$ = new BinaryNode("+", $1, $3, yylineno);
+                }
+                | expression MINUS expression {
+                    $$ = new BinaryNode("-", $1, $3, yylineno);
+                }
+                | expression TIMES expression {
+                    $$ = new BinaryNode("*", $1, $3, yylineno);
+                }
+                | expression DIVIDE expression {
+                    $$ = new BinaryNode("/", $1, $3, yylineno);
+                }
+                | expression MODULUS expression {
+                    $$ = new BinaryNode("%", $1, $3, yylineno);
+                }
+                | expression AND expression {
+                    $$ = new BinaryNode("&&", $1, $3, yylineno);
+                }
+                | expression OR expression {
+                    $$ = new BinaryNode("||", $1, $3, yylineno);
+                }
+                | expression EQ expression {
+                    $$ = new BinaryNode("==", $1, $3, yylineno);
+                }
+                | expression NE expression {
+                    $$ = new BinaryNode("!=", $1, $3, yylineno);
+                }
+                | expression LE expression {
+                    $$ = new BinaryNode("<=", $1, $3, yylineno);
+                }
+                | expression GE expression {
+                    $$ = new BinaryNode(">=", $1, $3, yylineno);
+                }
+                | expression GT expression {
+                    $$ = new BinaryNode(">", $1, $3, yylineno);
+                }
+                | expression LT expression {
+                    $$ = new BinaryNode("<", $1, $3, yylineno);
+                }
                 ;
 
 identifier      : IDENTIFIER {

@@ -21,6 +21,8 @@ void error(int line, std::string message) {
     ERROR_COUNT++;
 }
 
+
+
 ASTNode::ASTNode(int line) :lineno(line) {}
 
 ProgramNode::ProgramNode(ASTNode* func_list, ASTNode* main) 
@@ -459,6 +461,59 @@ void CallNode::TypeCheck() {
         }
     }
 }
+
+BinaryNode::BinaryNode(std::string oper, ASTNode* l, ASTNode* r, int line)
+: ExpressionNode(line)
+{
+    op = oper;
+    left = static_cast<ExpressionNode*>(l);
+    right = static_cast<ExpressionNode*>(r);
+    setType(Operators.find(op)->second);
+}
+
+BinaryNode::~BinaryNode() {
+    delete left;
+    delete right;
+}
+
+void BinaryNode::setGlobalST(SymbolTable* ST) {
+    GlobalST = ST;
+    left->setGlobalST(ST);
+    right->setGlobalST(ST);
+}
+
+void BinaryNode::setLocalST(SymbolTable* ST) {
+    GlobalST = ST;
+    left->setLocalST(ST);
+    right->setLocalST(ST);
+}
+
+Literal* BinaryNode::getValue() {
+    return nullptr;
+}
+
+void BinaryNode::TypeCheck() {
+    left->TypeCheck();
+    right->TypeCheck();
+    Type lType = left->getType();
+    Type rType = right->getType();
+    if(lType != rType) {
+        error(lineno, "incompatible types '" + typeToString(lType) + "' and '" + typeToString(rType) + "'.");
+    }
+    else { 
+        if(getType() == Type::none) {
+            setType(lType);
+        }
+        if(lType != getType()) {
+            error(lineno, "ltype '" + typeToString(lType) + "' not compatible with operator '" + op + "'.");
+        }
+        if(rType != getType()) {
+            error(lineno, "rtype '" + typeToString(rType) + "' not compatible with operator '" + op + "'.");
+        }
+    }
+
+}
+
 
 IdentifierNode::IdentifierNode(std::string lexeme, int line)
     : ExpressionNode(line), lexeme(lexeme) {}
