@@ -103,17 +103,38 @@ class TypeNode: public ASTNode {
         ~TypeNode();
 };
 
-class IdentifierNode: public ASTNode {
+class LValueNode: public ASTNode {
+    public:
+        virtual void initialize() = 0; // initialize the identifier or array
+        LValueNode(int line): ASTNode(line) {}
+};
+
+class IdentifierNode: public LValueNode {
     private:
         std::string lexeme;
     public:
-        std::string get_lexeme();
         IdentifierNode(std::string id, int line);
         ~IdentifierNode();
+        std::string getLexeme();
         TypeInfo getType() override;
         void TypeCheck() override;
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
+        void initialize() override;
+};
+
+class ArrayAccessNode: public LValueNode {
+    private:
+        IdentifierNode* identifier;
+        ASTNode* expression;
+    public:
+        ArrayAccessNode(ASTNode* id, ASTNode* expr, int line);
+        ~ArrayAccessNode();
+        void setGlobalST(SymbolTable* ST) override;
+        void setLocalST(SymbolTable* ST) override;
+        TypeInfo getType() override;
+        void TypeCheck() override;
+        void initialize() override;
 };
 
 class VarDeclNode: public ASTNode {
@@ -144,7 +165,7 @@ class ArrayDeclNode: public ASTNode {
 
 class AssignmentStatementNode: public ASTNode {
     private:
-        IdentifierNode* identifier;
+        LValueNode* identifier;
         ASTNode* expression;
     public:
         AssignmentStatementNode(ASTNode* identifier, ASTNode* expr, int line);
@@ -231,6 +252,7 @@ class ReturnNode: public ASTNode {
         ~ReturnNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
+        void TypeCheck() override;
         ASTNode* FindReturn() override;
 };
 

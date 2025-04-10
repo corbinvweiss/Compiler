@@ -118,6 +118,9 @@ statement_list  : statement_list statement {
 statement       : identifier ASSIGN expression SEMICOLON {
                     $$ = new AssignmentStatementNode($1, $3, yylineno);
                 }
+                | array_access ASSIGN expression SEMICOLON {
+                    $$ = new AssignmentStatementNode($1, $3, yylineno);
+                }
                 | expression SEMICOLON {
                     $$ = $1;
                 }
@@ -164,6 +167,9 @@ actual_args     : expression {
 expression      : func_call_expression {
                     $$ = $1;
                 }
+                | array_access {
+                    $$ = $1;
+                }               
                 | number {
                     $$ = $1;
                 }
@@ -180,6 +186,10 @@ expression      : func_call_expression {
                     $$ = $1;
                 }
                 ;
+
+array_access    : identifier LSQBRACK expression RSQBRACK {
+                    $$ = new ArrayAccessNode($1, $3, yylineno);
+                }
 
 binary          : expression PLUS expression {
                     $$ = new BinaryNode("+", $1, $3, yylineno);
@@ -243,6 +253,12 @@ type            : I32 {
                 }
                 | BOOL {
                     $$ = new TypeNode(Type::Bool, yylineno);
+                }
+                | LSQBRACK I32 RSQBRACK {
+                    $$ = new TypeNode(Type::array_i32, yylineno);
+                }
+                | LSQBRACK BOOL RSQBRACK {
+                    $$ = new TypeNode(Type::array_bool, yylineno);
                 }
                 ;
 

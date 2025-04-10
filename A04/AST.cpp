@@ -118,7 +118,7 @@ void FuncDefNode::setLocalST(SymbolTable* ST) {
 
 
 void FuncDefNode::TypeCheck() {
-    std::string lexeme = identifier->get_lexeme();
+    std::string lexeme = identifier->getLexeme();
     FunctionInfo* info = new FunctionInfo(getType(), params_list->getTypes());
     int valid = GlobalST->insert(lexeme, info);
     if(!valid) {
@@ -134,7 +134,7 @@ void FuncDefNode::CheckReturn() {
     std::vector<ASTNode*> return_stmts = stmt_list->FindReturns();
     // expected return type but got no return statements
     if(getType().type != Type::none && return_stmts.empty()) {
-        error(lineno, "function '" + identifier->get_lexeme() + 
+        error(lineno, "function '" + identifier->getLexeme() + 
         "' missing return of type '" + typeToString(getType()) + "'.");
     }
     else {
@@ -142,7 +142,7 @@ void FuncDefNode::CheckReturn() {
             if(return_stmt) {
                 // expected void or some type, got something else
                 if(getType().type != return_stmt->getType().type) {
-                    error(return_stmt->lineno, "function '" + identifier->get_lexeme() + "' expected return of type '"  + 
+                    error(return_stmt->lineno, "function '" + identifier->getLexeme() + "' expected return of type '"  + 
                     typeToString(getType()) + "' but got return of type '" + typeToString(return_stmt->getType()) + "'.");
                 }
             }
@@ -154,12 +154,6 @@ ReturnNode::ReturnNode(ASTNode* expr, int line)
 : ASTNode(line) 
 {
     expression = expr;
-    if(expr) {
-        setType(expr->getType());
-    }
-    else {
-        setType(Type::none);
-    }
 }
 
 ReturnNode::ReturnNode(int line)
@@ -177,6 +171,15 @@ void ReturnNode::setGlobalST(SymbolTable* ST) {
 void ReturnNode::setLocalST(SymbolTable* ST) {
     LocalST = ST;
     if(expression) expression->setLocalST(ST);
+}
+
+void ReturnNode::TypeCheck() {
+    if(expression) {
+        setType(expression->getType());
+    }
+    else {
+        setType(Type::none);
+    }
 }
 
 ASTNode* ReturnNode::FindReturn() {
@@ -310,7 +313,7 @@ VarDeclNode::~VarDeclNode() {
     delete type;
 }
 void VarDeclNode::TypeCheck() {
-    std::string lexeme = identifier->get_lexeme();
+    std::string lexeme = identifier->getLexeme();
     IdentifierInfo* info = new IdentifierInfo(getType());
     int valid = LocalST->insert(lexeme, info);
     if(valid) {
@@ -360,7 +363,7 @@ void ArrayDeclNode::setLocalST(SymbolTable* ST) {
 }
 
 void ArrayDeclNode::TypeCheck() {
-    std::string lexeme = identifier->get_lexeme();
+    std::string lexeme = identifier->getLexeme();
     IdentifierInfo* info = new IdentifierInfo(getType());
     int valid = LocalST->insert(lexeme, info);
     if(valid) {
@@ -427,7 +430,7 @@ std::vector<ASTNode*> StatementListNode::FindReturns() {
 AssignmentStatementNode::AssignmentStatementNode(ASTNode* id, ASTNode* expr, int line)
 : ASTNode(line) 
 {
-    identifier = static_cast<IdentifierNode*>(id);
+    identifier = static_cast<LValueNode*>(id);
     expression = expr;
 }
 
@@ -439,21 +442,14 @@ AssignmentStatementNode::~AssignmentStatementNode() {
 void AssignmentStatementNode::TypeCheck() {
     expression->TypeCheck();
     // fetch the information for this identifier from the LocalST
-    std::string lexeme = identifier->get_lexeme();
-    IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
-    if(info) {
-        TypeInfo rtype = expression->getType();
-        TypeInfo ltype = info->getReturnType();
-        if(!(ltype.type == rtype.type && ltype.size == rtype.size)) {
-            std::cout << "error [line " << lineno << "]: Cannot assign '" 
-                << typeToString(rtype) << "' to type '" << typeToString(info->getReturnType()) << "'.\n";
-        }
-        else {
-            info->initialized = true;
-        }
+    TypeInfo rtype = expression->getType();
+    TypeInfo ltype = identifier->getType();
+    if(!(ltype.type == rtype.type && ltype.size == rtype.size)) {
+        std::cout << "error [line " << lineno << "]: Cannot assign '" 
+            << typeToString(rtype) << "' to type '" << typeToString(ltype) << "'.\n";
     }
-    else { // identifier not found because it has not been declared.
-        std::cout << "error [line " << lineno << "]: Identifier '" << lexeme << "'" << " not declared.\n";
+    else {
+        identifier->initialize();
     }
 }
 
@@ -540,14 +536,14 @@ void CallNode::setLocalST(SymbolTable* ST) {
 }
 
 TypeInfo CallNode::getType() {
-    std::string lexeme = identifier->get_lexeme();
+    std::string lexeme = identifier->getLexeme();
     SymbolInfo* func = GlobalST->lookup(lexeme);
     return func->getReturnType();
 }
 
 void CallNode::TypeCheck() {
     std::vector<TypeInfo> args = actual_args->argTypes();
-    std::string lexeme = identifier->get_lexeme();
+    std::string lexeme = identifier->getLexeme();
     FunctionInfo* funcInfo = static_cast<FunctionInfo*>(GlobalST->lookup(lexeme));
     if(!funcInfo) { // the function is not defined
         error(lineno, "undefined function '" + lexeme + "'.");
@@ -560,12 +556,59 @@ void CallNode::TypeCheck() {
     }
     else {
         for(std::size_t i=0; i<funcParams.size(); ++i) {
-            if(!(funcParams[i].type == args[i].type && funcParams[i].size == args[i].size)) {
+            if(!(funcParams[i].type == args[i].type)) {
                 std::cout << "error [line " << lineno << "]: Wrong type of arguments. "
                 << "Expected " << typeToString(funcParams) << " but got " << typeToString(args) << ".\n";
             }
         }
     }
+}
+
+ArrayAccessNode::ArrayAccessNode(ASTNode* id, ASTNode* expr, int line) 
+: LValueNode(line) 
+{
+    identifier = static_cast<IdentifierNode*>(id);
+    expression = expr;
+}
+
+ArrayAccessNode::~ArrayAccessNode() {
+    delete identifier;
+    delete expression;
+}
+
+void ArrayAccessNode::setGlobalST(SymbolTable* ST) {
+    GlobalST = ST;
+    identifier->setGlobalST(ST);
+    expression->setGlobalST(ST);
+}
+
+void ArrayAccessNode::setLocalST(SymbolTable* ST) {
+    LocalST = ST;
+    identifier->setLocalST(ST);
+    expression->setLocalST(ST);
+}
+
+TypeInfo ArrayAccessNode::getType() {
+    // get the type of elements in the array
+    std::string lexeme = identifier->getLexeme();
+    IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
+    if(!info) return Type::none;
+    TypeInfo tinfo = info->getReturnType();
+    if(tinfo.type == Type::array_bool) return Type::Bool;
+    if(tinfo.type == Type::array_i32) return Type::i32;
+    else return Type::none;
+}
+
+void ArrayAccessNode::TypeCheck() {
+    expression->TypeCheck();
+    Type exprType = expression->getType().type;
+    if(exprType != Type::i32) {
+        error(lineno, "cannot use type '" + typeToString(exprType) + "' for array access.");
+    }
+}
+
+void ArrayAccessNode::initialize() {
+    identifier->initialize();
 }
 
 IfStatementNode::IfStatementNode(ASTNode* expr, ASTNode* if_, ASTNode* else_, int line) 
@@ -771,11 +814,11 @@ void BinaryNode::TypeCheck() {
 
 
 IdentifierNode::IdentifierNode(std::string lexeme, int line)
-    : ASTNode(line), lexeme(lexeme) {}
+    : LValueNode(line), lexeme(lexeme) {}
 
 IdentifierNode::~IdentifierNode() {}
 
-std::string IdentifierNode::get_lexeme() {
+std::string IdentifierNode::getLexeme() {
     return lexeme;
 }
 
@@ -785,7 +828,6 @@ void IdentifierNode::TypeCheck() {
         if(!info->initialized) {  // identifier is initialized
             std::cout << "error [line " << lineno << "]: " << "Identifier '" << lexeme << "' not initialized.\n";
         }
-        
     }
     else {
         std::cout << "error [line " << lineno << "]: " << "Identifier '" << lexeme << "' not found.\n";
@@ -797,7 +839,15 @@ TypeInfo IdentifierNode::getType() {
     if(info) {
         return info->getReturnType();
     }
+    else {
+        error(lineno, "identifier '" + lexeme + "' not found.");
+    }
     return Type::none;
+}
+
+void IdentifierNode::initialize() {
+    IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
+    if(info) info->initialized = true;
 }
 
 void IdentifierNode::setGlobalST(SymbolTable* ST) {

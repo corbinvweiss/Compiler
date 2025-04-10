@@ -1,6 +1,7 @@
 fn f(x: i32, a: bool) -> bool {
     let mut a: i32;
     a = 5;
+    return a;
 }
 
 fn f(a: bool) -> bool {}

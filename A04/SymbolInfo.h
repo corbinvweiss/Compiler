@@ -38,7 +38,7 @@ struct TypeInfo {
     TypeInfo(Type t, int sz)
     : type(t), size(sz) {}
     TypeInfo(Type t)
-    : type(t), size(0) {}
+    : type(t), size(UNKNOWN_ARR) {}
 };
 
 using Literal = std::variant<int, bool>;
