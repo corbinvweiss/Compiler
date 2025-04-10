@@ -234,6 +234,19 @@ class CallNode: public ASTNode {
         void TypeCheck() override;
 };
 
+class IfStatementNode: public ASTNode {
+    private:
+        ASTNode* expression;
+        StatementListNode* if_branch;
+        StatementListNode* else_branch;
+    public:
+        IfStatementNode(ASTNode* expr, ASTNode* if_, ASTNode* else_, int line);
+        ~IfStatementNode();
+        void setGlobalST(SymbolTable* ST) override;
+        void setLocalST(SymbolTable* ST) override;
+        void TypeCheck() override;
+};
+
 class BinaryNode : public ASTNode {
     private:
         std::string op;

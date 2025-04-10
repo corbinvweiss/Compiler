@@ -124,6 +124,13 @@ statement       : identifier ASSIGN expression SEMICOLON {
                 | RETURN SEMICOLON {
                     $$ = new ReturnNode(yylineno);
                 }
+                | IF expression LCURLY statement_list RCURLY {
+                    $$ = new IfStatementNode($2, $4, nullptr, yylineno);
+                }
+                | IF expression LCURLY statement_list RCURLY 
+                    ELSE LCURLY statement_list RCURLY {
+                    $$ = new IfStatementNode($2, $4, $8, yylineno);
+                }
                 ;
 
 func_call_expression : identifier LPAREN actual_args RPAREN {

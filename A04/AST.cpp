@@ -512,8 +512,6 @@ void CallNode::TypeCheck() {
         return;
     }
     std::vector<Type> funcParams = funcInfo->getParamList();
-
-
     if(args.size() != funcParams.size()) {
         std::string msg = "wrong number of arguments: expected " + std::to_string(funcParams.size()) + " but got " + std::to_string(args.size())+ ".";
         error(lineno, msg);
@@ -525,6 +523,49 @@ void CallNode::TypeCheck() {
                 << "Expected " << typeToString(funcParams) << " but got " << typeToString(args) << ".\n";
             }
         }
+    }
+}
+
+IfStatementNode::IfStatementNode(ASTNode* expr, ASTNode* if_, ASTNode* else_, int line) 
+: ASTNode(line) 
+{
+    expression = expr;
+    if_branch = static_cast<StatementListNode*>(if_);
+    else_branch = static_cast<StatementListNode*>(else_);
+}
+
+IfStatementNode::~IfStatementNode() {
+    delete expression;
+    delete if_branch;
+    if(else_branch) delete else_branch;
+}
+
+void IfStatementNode::setGlobalST(SymbolTable* ST) {
+    GlobalST = ST;
+    expression->setGlobalST(ST);
+    if_branch->setGlobalST(ST);
+    if (else_branch) {
+        else_branch->setGlobalST(ST);
+    }
+}
+
+void IfStatementNode::setLocalST(SymbolTable* ST) {
+    LocalST = ST;
+    expression->setLocalST(ST);
+    if_branch->setLocalST(ST);
+    if (else_branch) {
+        else_branch->setLocalST(ST);
+    }
+}
+
+void IfStatementNode::TypeCheck() {
+    expression->TypeCheck();
+    if(expression->getType() != Type::Bool) {
+        error(lineno, "expected boolean condition but got '" + typeToString(expression->getType()) + "'.");
+    }
+    if_branch->TypeCheck();
+    if (else_branch) {
+        else_branch->TypeCheck();
     }
 }
 
