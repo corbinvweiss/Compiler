@@ -176,6 +176,9 @@ expression      : func_call_expression {
                 | bool {
                     $$ = $1;
                 }
+                | array_literal {
+                    $$ = $1;
+                }
                 | identifier {
                     $$ = $1;
                 }
@@ -184,6 +187,20 @@ expression      : func_call_expression {
                 }
                 | binary {
                     $$ = $1;
+                }
+                ;
+
+array_literal   : LSQBRACK expr_list RSQBRACK {
+                    $$ = $2;
+                }
+                ;
+
+expr_list       : expr_list COMMA expression {
+                    static_cast<ArrayLiteralNode*>($1)->append($3);
+                    $$ = $1;
+                }
+                | expression {
+                    $$ = new ArrayLiteralNode($1, yylineno);
                 }
                 ;
 

@@ -374,6 +374,63 @@ void ArrayDeclNode::TypeCheck() {
     }
 }
 
+ArrayLiteralNode::ArrayLiteralNode(ASTNode* expression, int line)
+: ASTNode(line)
+{
+    expressions = new std::vector<ASTNode*>();
+    expressions->push_back(expression);
+}
+
+ArrayLiteralNode::~ArrayLiteralNode() {
+    delete expressions;
+}
+
+void ArrayLiteralNode::append(ASTNode* expression) {
+    expressions->push_back(expression);
+} 
+
+void ArrayLiteralNode::setGlobalST(SymbolTable* ST) {
+    GlobalST = ST;
+    for(ASTNode* expr : *expressions) {
+        expr->setGlobalST(ST);
+    }
+}
+
+void ArrayLiteralNode::setLocalST(SymbolTable* ST) {
+    LocalST = ST;
+    for(ASTNode* expr : *expressions) {
+        expr->setLocalST(ST);
+    }
+}
+
+void ArrayLiteralNode::TypeCheck() {
+    for(ASTNode* expr : *expressions) {
+        expr->TypeCheck();
+    }
+    if(!expressions->empty()) {
+        TypeInfo firstType = expressions->front()->getType();
+        if(!(firstType.type == Type::i32 || firstType.type == Type::Bool)) {
+            error(lineno, "invalid array literal: expected bool or i32 but got type '" + typeToString(firstType) + "'.");
+            return;
+        }
+        int size = expressions->size();
+        // check that all expressions have the same type as the first element
+        for(ASTNode* expr : *expressions) { 
+            if(expr->getType().type != firstType.type) {
+                error(lineno, "invalid array literal: expected values of type '" + typeToString(firstType) 
+                + "' but got '" + typeToString(expr->getType())+ "'.");
+                return;
+            }
+        }
+        if(firstType.type == Type::i32) {
+            setType(TypeInfo(Type::array_i32, size));
+        }
+        else if(firstType.type == Type::i32) {
+            setType(TypeInfo(Type::array_bool, size));
+        }
+    }
+}
+
 
 StatementListNode::StatementListNode(int line)
 : ASTNode(line) 

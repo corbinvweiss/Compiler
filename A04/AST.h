@@ -103,6 +103,19 @@ class TypeNode: public ASTNode {
         ~TypeNode();
 };
 
+// an array literal is just a list of expressions
+class ArrayLiteralNode: public ASTNode {
+    private:
+        std::vector<ASTNode*>* expressions;
+    public:
+        ArrayLiteralNode(ASTNode* expression, int line);
+        ~ArrayLiteralNode();
+        void append(ASTNode* expression);
+        void setGlobalST(SymbolTable* ST) override;
+        void setLocalST(SymbolTable* ST) override;
+        void TypeCheck() override;
+};
+
 class LValueNode: public ASTNode {
     public:
         virtual void initialize() = 0; // initialize the identifier or array
