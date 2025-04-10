@@ -65,6 +65,7 @@ class ASTNode {
         virtual void setGlobalST(SymbolTable* ST) {};
         virtual void setLocalST(SymbolTable* ST) {};
         virtual void TypeCheck() {};
+        virtual ASTNode* FindReturn() {return nullptr;}
 
         virtual void setType(Type t) {
             _type = t;
@@ -137,6 +138,7 @@ class StatementListNode: public ASTNode {
         void append(ASTNode* stmt);
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
+        std::vector<ASTNode*> FindReturns();
 };
 
 class LocalDeclListNode: public ASTNode {
@@ -190,6 +192,17 @@ class FuncDefNode: public ASTNode {
         void setLocalST(SymbolTable* ST) override;
         void TypeCheck() override;
         void CheckReturn();
+};
+
+class ReturnNode: public ASTNode {
+    private: 
+        ASTNode* expression;
+    public:
+        ReturnNode(ASTNode* expr, int line);
+        ~ReturnNode();
+        void setGlobalST(SymbolTable* ST) override;
+        void setLocalST(SymbolTable* ST) override;
+        ASTNode* FindReturn() override;
 };
 
 class ActualArgsNode: public ASTNode {

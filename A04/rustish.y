@@ -118,6 +118,9 @@ statement       : identifier ASSIGN expression SEMICOLON {
                 | expression SEMICOLON {
                     $$ = $1;
                 }
+                | RETURN expression SEMICOLON {
+                    $$ = new ReturnNode($2, yylineno);
+                }
                 ;
 
 func_call_expression : identifier LPAREN actual_args RPAREN {

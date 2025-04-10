@@ -78,9 +78,7 @@ void MainDefNode::setLocalST(SymbolTable* ST) {
 
 void MainDefNode::TypeCheck() {
     local_decl_list->TypeCheck();
-    LocalST->show();
     stmt_list->TypeCheck();
-    LocalST->show();
 }
 
 FuncDefNode::FuncDefNode(ASTNode* id, ASTNode* params, ASTNode* type, ASTNode* decl_list, ASTNode* stmts, int line) 
@@ -110,17 +108,11 @@ void FuncDefNode::TypeCheck() {
     std::string lexeme = identifier->get_lexeme();
     FunctionInfo* info = new FunctionInfo(getType(), params_list->getTypes());
     int valid = GlobalST->insert(lexeme, info);
-    if(valid) {
-        GlobalST->show();
-        std::cout << "Adding function " << lexeme << " to the symbol table.\n";
-    }
-    else {
+    if(!valid) {
         error(lineno, "function '" + lexeme + "' already defined.");
     }
     local_decl_list->TypeCheck();
-    LocalST->show();
     stmt_list->TypeCheck();
-    LocalST->show();
     CheckReturn();
 }
 
@@ -130,6 +122,52 @@ void FuncDefNode::CheckReturn() {
     // and no return statements that return different types
     // if the function has no return type
     // make sure there is no return statement that returns a type
+    // 1. recurse through the stmt_list to find a return statement
+    // 2. if there is a return statement, compare its return type with the return type of the function def.
+    // This requires that StatementList have a FindReturnStmt method
+    // 
+    std::vector<ASTNode*> return_stmts = stmt_list->FindReturns();
+    // expected return type but got no return statements
+    if(getType() != Type::none && return_stmts.empty()) {
+        error(lineno, "function '" + identifier->get_lexeme() + 
+        "' missing return of type '" + typeToString(getType()) + "'.");
+    }
+    else {
+        for(ASTNode* return_stmt: return_stmts) {
+            if(return_stmt) {
+                // expected void or some type, got something else
+                if(getType() != return_stmt->getType()) {
+                    error(lineno, "function '" + identifier->get_lexeme() + "' expected return of type '"  + 
+                    typeToString(getType()) + "' but got return of type '" + typeToString(return_stmt->getType()) + "'.");
+                }
+            }
+        }
+    }
+}
+
+ReturnNode::ReturnNode(ASTNode* expr, int line)
+: ASTNode(line) 
+{
+    expression = expr;
+    setType(expr->getType());
+}
+
+ReturnNode::~ReturnNode() {
+    delete expression;
+}
+
+void ReturnNode::setGlobalST(SymbolTable* ST) {
+    GlobalST = ST;
+    expression->setGlobalST(ST);
+}
+
+void ReturnNode::setLocalST(SymbolTable* ST) {
+    LocalST = ST;
+    expression->setLocalST(ST);
+}
+
+ASTNode* ReturnNode::FindReturn() {
+    return this;
 }
 
 void FuncDefNode::setGlobalST(SymbolTable* ST) {
@@ -317,6 +355,18 @@ void StatementListNode::setLocalST(SymbolTable* ST) {
     for(ASTNode* stmt : *stmt_list) {
         stmt->setLocalST(ST);
     }
+}
+
+// find all return statements in a statement list
+std::vector<ASTNode*> StatementListNode::FindReturns() {
+    std::vector<ASTNode*> returns = {};
+    for(ASTNode* stmt: *stmt_list) {
+        ASTNode* return_stmt = stmt->FindReturn();
+        if(return_stmt) {
+            returns.push_back(return_stmt);
+        }
+    }
+    return returns;
 }
 
 

@@ -10,9 +10,9 @@ The following should cause errors:
 - [x] Passing wrong number of arguments to function call
 - [ ] Returning wrong type from function call (also returning something from a "void" function)
 - [ ] Missing return from function declared to return i32 or bool
-- [ ] Mixed arithmetic (i32/bool)
-- [ ] Arithmetic with bools
-- [ ] Logical comparison with i32s
+- [x] Mixed arithmetic (i32/bool)
+- [x] Arithmetic with bools
+- [x] Logical comparison with i32s
 - [x] Missing main function
 - [x] Missing let, mut, etc
 - [ ] Non-i32 array indices
@@ -20,17 +20,20 @@ The following should cause errors:
 - [x] Duplicate local variables
 - [ ] Non-Boolean expression in an if or while statement
 - [x] Variable declaration after executable code within a function definition
+- [ ] Using a "void" function as an rvalue 
+- [ ] 
 
 ---
 Bugs:
-- not initialized error and type assignment error for same statement
-- you can have two functions with the same name
-- You can call an undefined function
-
+- using an argument in a function gives a 'not declared' error
 ---
 Next:
-- implement all types of function definitions
+- function returns
+
 ---
+
+Questions:
+- What do we do when we have multiple types of errors for the same line? just report them all?
 
 ## Function type checking
 ```
