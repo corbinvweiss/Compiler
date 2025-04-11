@@ -1,0 +1,19 @@
+fn f() {
+    return 5;
+}
+
+fn g(a: i32, b: bool) -> bool {
+    return;
+    return 5;
+}
+
+fn h(a: i32, b: bool) -> bool {
+    a = 32;
+}
+
+fn main() {
+    let mut a: i32;
+    a = f();
+    g(5, true);
+    h(1, false);
+}

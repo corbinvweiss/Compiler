@@ -16,6 +16,7 @@ void yyerror(const char *s);
 
 extern FILE *yyin;
 extern char* yytext;
+extern int yylineno;
 %}
 
 /* BISON Declarations */
@@ -41,13 +42,48 @@ input           : program {
                 }
                 ;
 
-program         : main_def {
-                    $$ = new ProgramNode($1);
+program         : func_def_list main_def {
+                    $$ = new ProgramNode($1, $2);
                 }
                 ;
 
-main_def        : FN MAIN LPAREN RPAREN LCURLY local_decl_list RCURLY {
-                    $$ = new MainDefNode($6);
+func_def_list   : func_def_list func_def {
+                    // append func_def to func_def_list
+                    static_cast<FuncDefListNode*>($1)->append($2);
+                    $$ = $1;
+                }
+                | /* epsilon */ {
+                    // Create a new empty function definition list
+                    $$ = new FuncDefListNode(yylineno);
+                }
+                ;
+
+func_def        : FN identifier LPAREN params_list RPAREN ARROW type LCURLY local_decl_list statement_list RCURLY {
+                    $$ = new FuncDefNode($2, $4, $7, $9, $10, yylineno);
+                }
+                | FN identifier LPAREN params_list RPAREN LCURLY local_decl_list statement_list RCURLY {
+                    $$ = new FuncDefNode($2, $4, nullptr, $7, $8, yylineno);
+                }
+                | FN identifier LPAREN RPAREN ARROW type LCURLY local_decl_list statement_list RCURLY {
+                    $$ = new FuncDefNode($2, nullptr, $6, $8, $9, yylineno);
+                }
+                | FN identifier LPAREN RPAREN LCURLY local_decl_list statement_list RCURLY {
+                    $$ = new FuncDefNode($2, nullptr, nullptr, $6, $7, yylineno);
+                }
+                ;
+
+params_list     : params_list COMMA var_decl {
+                    // append new var_decl to params_list
+                    static_cast<ParamsListNode*>($1)->append($3);
+                    $$ = $1;
+                } 
+                | var_decl {
+                    $$ = new ParamsListNode($1, yylineno);
+                }
+                ;
+
+main_def        : FN MAIN LPAREN RPAREN LCURLY local_decl_list statement_list RCURLY {
+                    $$ = new MainDefNode($6, $7, yylineno);
                 }
                 ;
 
@@ -58,26 +94,203 @@ local_decl_list : local_decl_list LET MUT var_decl SEMICOLON {
                 }
                 | /* epsilon */ {
                     // Create a new empty local declaration list
-                    $$ = new LocalDeclListNode();
+                    $$ = new LocalDeclListNode(yylineno);
                 }
                 ;
 
 var_decl        : identifier COLON type {
-                    $$ = new VarDeclNode($1, $3);
+                    $$ = new VarDeclNode($1, $3, yylineno);
+                }
+                | identifier COLON LSQBRACK type SEMICOLON number RSQBRACK {
+                    $$ = new ArrayDeclNode($1, $4, $6, yylineno);
+                }
+                ;
+
+statement_list  : statement_list statement {
+                    static_cast<StatementListNode*>($1)->append($2);
+                    $$ = $1;
+                }
+                | /* epsilon */ {
+                    $$ = new StatementListNode(yylineno);
+                }
+                ;
+
+statement       : identifier ASSIGN expression SEMICOLON {
+                    $$ = new AssignmentStatementNode($1, $3, yylineno);
+                }
+                | array_access ASSIGN expression SEMICOLON {
+                    $$ = new AssignmentStatementNode($1, $3, yylineno);
+                }
+                | expression SEMICOLON {
+                    $$ = $1;
+                }
+                | RETURN expression SEMICOLON {
+                    $$ = new ReturnNode($2, yylineno);
+                }
+                | RETURN SEMICOLON {
+                    $$ = new ReturnNode(yylineno);
+                }
+                | IF expression LCURLY statement_list RCURLY {
+                    $$ = new IfStatementNode($2, $4, nullptr, yylineno);
+                }
+                | IF expression LCURLY statement_list RCURLY 
+                    ELSE LCURLY statement_list RCURLY {
+                    $$ = new IfStatementNode($2, $4, $8, yylineno);
+                }
+                | WHILE expression LCURLY statement_list RCURLY {
+                    $$ = new WhileStatementNode($2, $4, yylineno);
+                }
+                | PRINT LPAREN actual_args RPAREN SEMICOLON {
+                    $$ = new PrintStatementNode($3, false, yylineno);
+                }
+                | PRINTLN LPAREN actual_args RPAREN SEMICOLON {
+                    $$ = new PrintStatementNode($3, true, yylineno);
+                }
+                ;
+
+func_call_expression : identifier LPAREN actual_args RPAREN {
+                    $$ = new CallNode($1, $3, yylineno);
+                }
+
+actual_args     : expression {
+                    $$ = new ActualArgsNode($1, yylineno);
+                }
+                | actual_args COMMA expression {
+                    static_cast<ActualArgsNode*>($1)->append($3);
+                    $$ = $1;
+                }
+                | /* epsilon */ {
+                    $$ = new ActualArgsNode(yylineno);
+                }
+                ;
+
+expression      : func_call_expression {
+                    $$ = $1;
+                }
+                | array_access {
+                    $$ = $1;
+                }               
+                | number {
+                    $$ = $1;
+                }
+                | bool {
+                    $$ = $1;
+                }
+                | array_literal {
+                    $$ = $1;
+                }
+                | identifier {
+                    $$ = $1;
+                }
+                | unary {
+                    $$ = $1;
+                }
+                | binary {
+                    $$ = $1;
+                }
+                ;
+
+array_literal   : LSQBRACK expr_list RSQBRACK {
+                    $$ = $2;
+                }
+                ;
+
+expr_list       : expr_list COMMA expression {
+                    static_cast<ArrayLiteralNode*>($1)->append($3);
+                    $$ = $1;
+                }
+                | expression {
+                    $$ = new ArrayLiteralNode($1, yylineno);
+                }
+                ;
+
+array_access    : identifier LSQBRACK expression RSQBRACK {
+                    $$ = new ArrayAccessNode($1, $3, yylineno);
+                }
+
+binary          : expression PLUS expression {
+                    $$ = new BinaryNode("+", $1, $3, yylineno);
+                }
+                | expression MINUS expression {
+                    $$ = new BinaryNode("-", $1, $3, yylineno);
+                }
+                | expression TIMES expression {
+                    $$ = new BinaryNode("*", $1, $3, yylineno);
+                }
+                | expression DIVIDE expression {
+                    $$ = new BinaryNode("/", $1, $3, yylineno);
+                }
+                | expression MODULUS expression {
+                    $$ = new BinaryNode("%", $1, $3, yylineno);
+                }
+                | expression AND expression {
+                    $$ = new BinaryNode("&&", $1, $3, yylineno);
+                }
+                | expression OR expression {
+                    $$ = new BinaryNode("||", $1, $3, yylineno);
+                }
+                | expression EQ expression {
+                    $$ = new BinaryNode("==", $1, $3, yylineno);
+                }
+                | expression NE expression {
+                    $$ = new BinaryNode("!=", $1, $3, yylineno);
+                }
+                | expression LE expression {
+                    $$ = new BinaryNode("<=", $1, $3, yylineno);
+                }
+                | expression GE expression {
+                    $$ = new BinaryNode(">=", $1, $3, yylineno);
+                }
+                | expression GT expression {
+                    $$ = new BinaryNode(">", $1, $3, yylineno);
+                }
+                | expression LT expression {
+                    $$ = new BinaryNode("<", $1, $3, yylineno);
+                }
+
+                ;
+unary           : MINUS expression {
+                    $$ = new UnaryNode("-", $2, yylineno);
+                }
+                | PLUS expression {
+                    $$ = new UnaryNode("+", $2, yylineno);
+                }
+                | NOT expression {
+                    $$ = new UnaryNode("!", $2, yylineno);
                 }
                 ;
 
 identifier      : IDENTIFIER {
-                    $$ = new IdentifierNode(yytext);
+                    $$ = new IdentifierNode(yytext, yylineno);
                 }
                 ;
 
 type            : I32 {
-                    $$ = new TypeNode(Type::i32);
+                    $$ = new TypeNode(Type::i32, yylineno);
                 }
                 | BOOL {
-                    $$ = new TypeNode(Type::Bool);
+                    $$ = new TypeNode(Type::Bool, yylineno);
                 }
+                | LSQBRACK I32 RSQBRACK {
+                    $$ = new TypeNode(Type::array_i32, yylineno);
+                }
+                | LSQBRACK BOOL RSQBRACK {
+                    $$ = new TypeNode(Type::array_bool, yylineno);
+                }
+                ;
+
+number          : NUMBER {
+                    $$ = new NumberNode(atoi(yytext), yylineno);
+                }
+                ;
+
+bool            : TRUE {
+                    $$ = new BoolNode(true, yylineno);
+                }
+                | FALSE {
+                    $$ = new BoolNode(false, yylineno);
+                }
+                ;
 
 %%
 

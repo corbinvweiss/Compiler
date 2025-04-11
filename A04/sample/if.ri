@@ -1,0 +1,25 @@
+fn f() -> bool {
+    return false;
+}
+
+fn g() -> i32 {
+    return 5;
+}
+
+fn main() {
+    if 5 {
+        2 + 2;
+    }
+    else {
+        5 + 2;
+    }
+
+    if true {
+
+    }
+    if 5 {
+
+    }
+
+    if g() {}
+}

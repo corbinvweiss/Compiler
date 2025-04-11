@@ -6,23 +6,19 @@
 #include "SymbolTable.h"
 #include <iostream>
 
-std::string SymbolInfo::show() {
-    return lexeme + " : " + typeToString(type);
-}
 
 std::string SymbolTable::get_name() {
     return this->name;
 }
 
-int SymbolTable::insert(SymbolInfo* info) {
+int SymbolTable::insert(std::string lexeme, SymbolInfo* info) {
     // insert the key, value pair if the key is not already present
     // returns whether insertion was successful
     if(info == nullptr) {
         return 0;
     }
-    std::string key = info->lexeme;
-    if(this->symbols.find(key) == this->symbols.end()) {
-        this->symbols[key] = info;
+    if(this->symbols.find(lexeme) == this->symbols.end()) {
+        this->symbols[lexeme] = info;
         return 1;
     }
     else {
@@ -45,7 +41,7 @@ int SymbolTable::size() {
 
 void SymbolTable::show() {
     for(auto it = this->symbols.begin(); it != this->symbols.end(); ++it){
-        std::cout << "(" << it->first << ", " << it->second->show() << ") ";
+        std::cout << it->first << ": " << it->second->show() + ", ";
     }
     std::cout << "\n";
 }

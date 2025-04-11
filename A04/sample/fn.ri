@@ -1,0 +1,26 @@
+fn f(x: i32, a: bool) -> bool {
+    let mut a: i32;
+    a = 5;
+    return a;
+}
+
+fn f(a: bool) -> bool {}
+
+fn empty() {} 
+
+fn args_only(num: i32, b: bool) {
+
+}
+
+fn return_only() -> i32 {}
+
+fn main() {
+    let mut b: bool;
+    let mut x: i32;
+    b = f(1, false);    // correct function call
+    b = f(1, 1);        // wrong type ags
+    b = f(1, false, 3);     // too many args
+    b = f(1);           // too few args
+
+    g();
+}

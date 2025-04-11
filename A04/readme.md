@@ -39,3 +39,5 @@ fn main() {
 ------------------
 error line 4: invalid assignment "bool" to "i32".
 ```
+
+To support line numbers I will add lineno as a parameter in ASTNode

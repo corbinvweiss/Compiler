@@ -1,0 +1,15 @@
+fn main() {
+    let mut a: i32;
+    let mut b: i32;
+    let mut a: i32; // redeclaring a variable
+    let mut c: bool;
+
+    a = false;  // wrong type assignment
+    a = d;      // undeclared rvalue
+    d = 17;     // undeclared lvalue
+    a = b;      // uninitialized
+    a = false;
+    b = 52;
+    a = b;
+    d = 17;
+}

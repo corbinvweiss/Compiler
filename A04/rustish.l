@@ -13,6 +13,7 @@ void reset_cin();
 %}
 
 %option noyywrap
+%option yylineno
 
 ws     [ ]
 tab    \t
@@ -25,6 +26,8 @@ eol    \n
 {ws}        {}
 {tab}       {}
 {eol}       {} 
+
+"//".*{eol} {}
 
 "let"       { return LET;}
 
@@ -83,6 +86,8 @@ eol    \n
 \/          { return DIVIDE; } 
 
 \%          { return MODULUS; }
+
+"&&"        { return AND; }
 
 "||"        { return OR; }
 
