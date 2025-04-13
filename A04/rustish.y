@@ -22,7 +22,6 @@ extern int yylineno;
 /* BISON Declarations */
 %define parse.error verbose
 
-
 %token MAIN LCURLY RCURLY IDENTIFIER SEMICOLON NUMBER ASSIGN PRINT COMMA
     PRINTLN ARROW COLON FN I32 BOOL LET MUT FALSE TRUE LPAREN RPAREN 
     PLUS MINUS TIMES DIVIDE MODULUS AND OR NOT IF ELSE WHILE RETURN
@@ -35,12 +34,6 @@ extern int yylineno;
 %left PLUS MINUS MODULUS    
 %left TIMES DIVIDE          
 %left NOT                  /* Higher precedence */
-
-// locations for error reporting from 
-// https://www.gnu.org/software/bison/manual/html_node/Error-Reporting-Function.html
-// %locations %define api.pure full
-// https://www.gnu.org/software/bison/manual/html_node/Location-Type.html
-// %define api.location.type {location_t}
 
 %%
 
@@ -198,6 +191,9 @@ expression      : func_call_expression {
                 | binary {
                     $$ = $1;
                 }
+                | group {
+                    $$ = $1;
+                }
                 ;
 
 array_literal   : LSQBRACK expr_list RSQBRACK {
@@ -216,6 +212,10 @@ expr_list       : expr_list COMMA expression {
 
 array_access    : identifier LSQBRACK expression RSQBRACK {
                     $$ = new ArrayAccessNode($1, $3, yylineno);
+                }
+
+group           : LPAREN expression RPAREN {
+                    $$ = $2;
                 }
 
 binary          : expression PLUS expression {

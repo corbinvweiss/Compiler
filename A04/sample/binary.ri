@@ -16,4 +16,5 @@ fn main() {
     true == true;
     7 != 5;
     true != false;
+    2 * (1 + 1);
 }
