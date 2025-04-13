@@ -9,7 +9,36 @@
 #include "rustish.tab.hpp"
 extern int yylval;
 void reset_cin();
-void lex_error(int, std::string);
+void lex_error(const char* str);
+
+// from https://stackoverflow.com/questions/62115979/how-to-implement-better-error-messages-for-flex-bison
+static int next_column = 2;
+int column = 1;
+const int LEXER_ERROR = 1;
+
+#define HANDLE_COLUMN column = next_column; next_column += strlen(yytext);
+
+char *lineptr = NULL;
+size_t n = 0;
+size_t consumed = 0;
+size_t available = 0;
+
+size_t min(size_t a, size_t b);
+#define YY_INPUT(buf,result,max_size) {\
+    if(available <= 0) {\
+        consumed = 0;\
+        available = getline(&lineptr, &n, yyin);\
+        if (available < 0) {\
+            if (ferror(yyin)) { perror("read error:"); }\
+                available = 0;\
+            }\
+    }\
+    result = min(available, max_size);\
+    strncpy(buf, lineptr + consumed, result);\
+    consumed += result;\
+    available -= result;\
+}
+
 %}
 
 %option noyywrap
@@ -18,94 +47,95 @@ void lex_error(int, std::string);
 ws     [ ]
 tab    \t
 eol    \n
+VALID [a-zA-Z0-9_()\[\]{}=+\-*/%&!;:, ]
 
 
 /* Rules Section */
 %%
 
-{ws}        {}
-{tab}       {}
-{eol}       {} 
+{ws}        {HANDLE_COLUMN; }
+{tab}       {HANDLE_COLUMN; }
+{eol}       {HANDLE_COLUMN; next_column = 2; } 
 
 "//".*{eol} {}
 
-"let"       { return LET;}
+"let"       { HANDLE_COLUMN; return LET;}
 
-"mut"       { return MUT;}
+"mut"       { HANDLE_COLUMN; return MUT;}
 
-"fn"        { return FN;}
+"fn"        { HANDLE_COLUMN; return FN;}
 
-"if"        { return IF; }
+"if"        { HANDLE_COLUMN; return IF; }
 
-"else"      { return ELSE; }
+"else"      { HANDLE_COLUMN; return ELSE; }
 
-"while"     { return WHILE; }
+"while"     { HANDLE_COLUMN; return WHILE; }
 
-"return"    { return RETURN; }
+"return"    { HANDLE_COLUMN; return RETURN; }
 
-"i32"       { return I32; }
+"i32"       { HANDLE_COLUMN; return I32; }
 
-"bool"      { return BOOL;}
+"bool"      { HANDLE_COLUMN; return BOOL;}
 
-"false"     { return FALSE; }
+"false"     { HANDLE_COLUMN; return FALSE; }
 
-"true"      { return TRUE; }
+"true"      { HANDLE_COLUMN; return TRUE; }
 
-"main"      {return MAIN;}
+"main"      { HANDLE_COLUMN; return MAIN;}
 
-"print"     {return PRINT;}
+"print"     { HANDLE_COLUMN; return PRINT;}
 
-"println"   {return PRINTLN; }
+"println"   { HANDLE_COLUMN; return PRINTLN; }
 
-\{          {return LCURLY;}
+\{          { HANDLE_COLUMN; return LCURLY;}
 
-\}          {return RCURLY;}
+\}          { HANDLE_COLUMN; return RCURLY;}
 
-\[          { return LSQBRACK; }
+\[          { HANDLE_COLUMN; return LSQBRACK; }
 
-\]          { return RSQBRACK; }
+\]          { HANDLE_COLUMN; return RSQBRACK; }
 
-\(          { return LPAREN; } 
+\(          { HANDLE_COLUMN; return LPAREN; } 
 
-\)          { return RPAREN; } 
+\)          { HANDLE_COLUMN; return RPAREN; } 
 
-\,          {return COMMA;}
+\,          { HANDLE_COLUMN; return COMMA;}
 
-":"         { return COLON;}
+":"         { HANDLE_COLUMN; return COLON;}
 
-";"         { return SEMICOLON;}
+";"         { HANDLE_COLUMN; return SEMICOLON;}
 
-"="         { return ASSIGN;}
+"="         { HANDLE_COLUMN; return ASSIGN;}
 
-\+          { return PLUS; } 
+\+          { HANDLE_COLUMN; return PLUS; } 
 
-\-          { return MINUS; } 
+\-          { HANDLE_COLUMN; return MINUS; } 
 
-\*          { return TIMES; } 
+\*          { HANDLE_COLUMN; return TIMES; } 
 
-\/          { return DIVIDE; } 
+\/          { HANDLE_COLUMN; return DIVIDE; } 
 
-\%          { return MODULUS; }
+\%          { HANDLE_COLUMN; return MODULUS; }
 
-"&&"        { return AND; }
+"&&"        { HANDLE_COLUMN; return AND; }
 
-"||"        { return OR; }
+"||"        { HANDLE_COLUMN; return OR; }
 
-\!          { return NOT; }
+\!          { HANDLE_COLUMN; return NOT; }
 
-"=="        { return EQ; }
+"=="        { HANDLE_COLUMN; return EQ; }
 
-"!="        { return NE; }
+"!="        { HANDLE_COLUMN; return NE; }
 
-\<          { return LT; }
+\<          { HANDLE_COLUMN; return LT; }
 
-\>          { return GT; }
+\>          { HANDLE_COLUMN; return GT; }
 
-"<="        { return LE; }
+"<="        { HANDLE_COLUMN; return LE; }
 
-">="        { return GE; }
+">="        { HANDLE_COLUMN; return GE; }
 
-"->"        { return ARROW; }
+"->"        { HANDLE_COLUMN; return ARROW; }
 
 [A-Za-z_][0-9A-Za-z_]* { /* identifier */
                 return IDENTIFIER;
@@ -114,13 +144,14 @@ eol    \n
                 yylval = std::stoi(yytext);
                 return NUMBER;
             }
-            
-.           {
-               std::string msg = "unexpected symbol '";
-               msg += yytext;
-               msg += "'.";
-               lex_error(yylineno, msg);
-            }
+
+. { HANDLE_COLUMN;
+    if (yytext[0] == '\0') {
+        // Could be EOF or some internal Flex error
+        return 0;
+    }
+    lex_error(yytext);
+}
 
 %%
 
@@ -128,6 +159,15 @@ eol    \n
 //    return 0;
 //}
 
-void lex_error(int line, std::string msg) {
-    std::cout << "error [line " << line << "]: "  << msg << '\n';
+void lex_error(const char *str) {
+    fprintf(stderr,"unexpected symbol '%s' in line %d, column %d:\n", str, yylineno, column);
+    fprintf(stderr,"%s", lineptr);
+    for(int i = 0; i < column - 1; i++)
+        fprintf(stderr,"_");
+    fprintf(stderr,"^\n");
+    exit(LEXER_ERROR);
+}
+
+size_t min(size_t a, size_t b) {
+    return b < a ? b : a;
 }

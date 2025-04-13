@@ -9,6 +9,7 @@
 #include "AST.h"
 
 #define YYSTYPE ASTNode *
+#define YYERROR_VERBOSE 1
 
 int yylex();
 int yyparse();
@@ -16,16 +17,19 @@ void yyerror (char const *str);
 
 extern FILE *yyin;
 extern char* yytext;
+extern char *lineptr;
 extern int yylineno;
+extern int column;
 %}
 
 /* BISON Declarations */
+%locations
 %define parse.error verbose
 
 %token MAIN LCURLY RCURLY IDENTIFIER SEMICOLON NUMBER ASSIGN PRINT COMMA
     PRINTLN ARROW COLON FN I32 BOOL LET MUT FALSE TRUE LPAREN RPAREN 
     PLUS MINUS TIMES DIVIDE MODULUS AND OR NOT IF ELSE WHILE RETURN
-    LSQBRACK RSQBRACK NE EQ GT LT LE GE
+    LSQBRACK RSQBRACK NE EQ GT LT LE GE ERROR
 
 %left OR                   /* Lowest precedence */
 %left AND
@@ -323,6 +327,12 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-void yyerror (char const *str) {
-    std::cout << "error [line " << yylineno << "]: " << str << ".\n";
+// from https://stackoverflow.com/questions/62115979/how-to-implement-better-error-messages-for-flex-bison
+void yyerror(const char *str)
+{
+    fprintf(stderr,"error: %s in line %d, column %d\n", str, yylineno, column);
+    fprintf(stderr,"%s", lineptr);
+    for(int i = 0; i < column - 1; i++)
+        fprintf(stderr,"_");
+    fprintf(stderr,"^\n");
 }
