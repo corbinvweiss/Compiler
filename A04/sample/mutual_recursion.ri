@@ -8,3 +8,7 @@ fn f2(n: i32) -> i32 {
     }
     return n;
 }
+
+main() {
+    println(f1(3));
+}

@@ -55,7 +55,6 @@ MainDefNode::MainDefNode(ASTNode* decl_list, ASTNode* stmts, int line)
 {
         local_decl_list = static_cast<LocalDeclListNode*>(decl_list);
         stmt_list = static_cast<StatementListNode*>(stmts);
-        std::cout << "Creating symbol table for main\n";
         setLocalST(new SymbolTable());
 }
 MainDefNode::~MainDefNode() {
@@ -317,10 +316,10 @@ void VarDeclNode::TypeCheck() {
     IdentifierInfo* info = new IdentifierInfo(getType());
     int valid = LocalST->insert(lexeme, info);
     if(valid) {
-        std::cout << lexeme << " : " << typeToString(getType()) << '\n';
+        // std::cout << lexeme << " : " << typeToString(getType()) << '\n';
     }
     else {
-        std::cout << "error [line " << lineno << "]: identifier '" << lexeme << "' redeclared.\n";
+        error( lineno, "identifier '" + lexeme + "' redeclared.");
     }
 }
 
@@ -367,7 +366,7 @@ void ArrayDeclNode::TypeCheck() {
     IdentifierInfo* info = new IdentifierInfo(getType());
     int valid = LocalST->insert(lexeme, info);
     if(valid) {
-        std::cout << lexeme << " : " << typeToString(getType()) << '\n';
+        // std::cout << lexeme << " : " << typeToString(getType()) << '\n';
     }
     else {
         error(lineno, "identifier '" + lexeme + "' redeclared.");
@@ -502,8 +501,7 @@ void AssignmentStatementNode::TypeCheck() {
     TypeInfo rtype = expression->getType();
     TypeInfo ltype = identifier->getType();
     if(!(ltype.type == rtype.type && ltype.size == rtype.size)) {
-        std::cout << "error [line " << lineno << "]: Cannot assign '" 
-            << typeToString(rtype) << "' to type '" << typeToString(ltype) << "'.\n";
+        error(lineno, "cannot assign '" + typeToString(rtype) + "' to type '" + typeToString(ltype) + "'.");
     }
     else {
         identifier->initialize();
@@ -614,8 +612,8 @@ void CallNode::TypeCheck() {
     else {
         for(std::size_t i=0; i<funcParams.size(); ++i) {
             if(!(funcParams[i].type == args[i].type)) {
-                std::cout << "error [line " << lineno << "]: Wrong type of arguments. "
-                << "Expected " << typeToString(funcParams) << " but got " << typeToString(args) << ".\n";
+                error(lineno, "wrong type of arguments. Expected " + typeToString(funcParams) + 
+                " but got " + typeToString(args) + ".");
             }
         }
     }
@@ -850,13 +848,11 @@ void BinaryNode::TypeCheck() {
     TypeInfo lType = left->getType();
     TypeInfo rType = right->getType();
     // check that both operands are ints or bools
-    if(!(BoolInt(lType) && BoolInt(rType))) {
-        return;
-    }
+    BoolInt(lType);
+    BoolInt(rType);
     // check that both operands are the same type
     if(!(lType.type == rType.type && lType.size == rType.size)) {
         error(lineno, "incompatible types '" + typeToString(lType) + "' and '" + typeToString(rType) + "'.");
-        return;
     }
     // check that both operands are compatible with the operator
     TypeInfo opType = GetOpType(op).op_type;
@@ -883,11 +879,11 @@ void IdentifierNode::TypeCheck() {
     IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
     if(info) { // identifier exists in local symbol table
         if(!info->initialized) {  // identifier is initialized
-            std::cout << "error [line " << lineno << "]: " << "Identifier '" << lexeme << "' not initialized.\n";
+            error(lineno, "Identifier '" + lexeme + "' not initialized.");
         }
     }
     else {
-        std::cout << "error [line " << lineno << "]: " << "Identifier '" << lexeme << "' not found.\n";
+        error(lineno, "Identifier '" + lexeme + "' not found.");
     }
 }
 
