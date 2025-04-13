@@ -1,0 +1,5 @@
+fn main() {
+    let mut a: i32;
+    let mut b: bool;
+    let mut i: [i325];
+}

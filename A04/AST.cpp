@@ -16,15 +16,19 @@ Each function owns its LocalST, and shares both the GlobalST and LocalST with it
 #include <iostream>
 
 int ERROR_COUNT;
-void error(int line, std::string message) {
-    std::cout << "error [line " << line << "]: " << message << "\n";
-    ERROR_COUNT++;
+void error(ErrorData err, std::string msg)
+{
+    std::cout << "error line " << err.line << ", column " << err.column << ": " + msg << "\n";
+    std::cout << err.lineText;
+    for(int i = 0; i < err.column - 1; i++)
+        std::cout << "_";
+    std::cout << "^\n";
 }
 
-ASTNode::ASTNode(int line) :lineno(line) {}
+ASTNode::ASTNode(ErrorData err) :err_data(err) {}
 
 ProgramNode::ProgramNode(ASTNode* func_list, ASTNode* main) 
-: ASTNode(0) 
+: ASTNode(ErrorData(nullptr, 0, 0))
 {
     func_def_list = static_cast<FuncDefListNode*>(func_list);
     main_def = static_cast<MainDefNode*>(main);
@@ -50,8 +54,8 @@ void ProgramNode::setLocalST(SymbolTable* ST) {
     main_def->setLocalST(ST);
 }
 
-MainDefNode::MainDefNode(ASTNode* decl_list, ASTNode* stmts, int line) 
-: ASTNode(line) 
+MainDefNode::MainDefNode(ASTNode* decl_list, ASTNode* stmts, ErrorData err) 
+: ASTNode(err) 
 {
         local_decl_list = static_cast<LocalDeclListNode*>(decl_list);
         stmt_list = static_cast<StatementListNode*>(stmts);
@@ -78,14 +82,14 @@ void MainDefNode::TypeCheck() {
     stmt_list->TypeCheck();
 }
 
-FuncDefNode::FuncDefNode(ASTNode* id, ASTNode* params, ASTNode* type, ASTNode* decl_list, ASTNode* stmts, int line) 
-: ASTNode(line)
+FuncDefNode::FuncDefNode(ASTNode* id, ASTNode* params, ASTNode* type, ASTNode* decl_list, ASTNode* stmts, ErrorData err) 
+: ASTNode(err)
 {
     identifier = static_cast<IdentifierNode*>(id);
     if(params) params_list = static_cast<ParamsListNode*>(params);
-    else params_list = new ParamsListNode(line);    // empty parameter list
+    else params_list = new ParamsListNode(err);    // empty parameter list
     if(type) return_type = static_cast<TypeNode*>(type);
-    else return_type = new TypeNode(Type::none, line);
+    else return_type = new TypeNode(Type::none, err);
     local_decl_list = static_cast<LocalDeclListNode*>(decl_list);
     stmt_list = static_cast<StatementListNode*>(stmts);
     
@@ -121,7 +125,7 @@ void FuncDefNode::TypeCheck() {
     FunctionInfo* info = new FunctionInfo(getType(), params_list->getTypes());
     int valid = GlobalST->insert(lexeme, info);
     if(!valid) {
-        error(lineno, "function '" + lexeme + "' already defined.");
+        error(err_data, "function '" + lexeme + "' already defined");
     }
     params_list->TypeCheck();   // put parameters in local ST
     local_decl_list->TypeCheck();
@@ -133,30 +137,30 @@ void FuncDefNode::CheckReturn() {
     std::vector<ASTNode*> return_stmts = stmt_list->FindReturns();
     // expected return type but got no return statements
     if(getType().type != Type::none && return_stmts.empty()) {
-        error(lineno, "function '" + identifier->getLexeme() + 
-        "' missing return of type '" + typeToString(getType()) + "'.");
+        error(err_data, "function '" + identifier->getLexeme() + 
+        "' missing return of type '" + typeToString(getType()) + "'");
     }
     else {
         for(ASTNode* return_stmt: return_stmts) {
             if(return_stmt) {
                 // expected void or some type, got something else
                 if(getType().type != return_stmt->getType().type) {
-                    error(return_stmt->lineno, "function '" + identifier->getLexeme() + "' expected return of type '"  + 
-                    typeToString(getType()) + "' but got return of type '" + typeToString(return_stmt->getType()) + "'.");
+                    error(return_stmt->err_data, "function '" + identifier->getLexeme() + "' expected return of type '"  + 
+                    typeToString(getType()) + "' but got return of type '" + typeToString(return_stmt->getType()) + "'");
                 }
             }
         }
     }
 }
 
-ReturnNode::ReturnNode(ASTNode* expr, int line)
-: ASTNode(line) 
+ReturnNode::ReturnNode(ASTNode* expr, ErrorData err)
+: ASTNode(err) 
 {
     expression = expr;
 }
 
-ReturnNode::ReturnNode(int line)
-: ASTNode(line) {}
+ReturnNode::ReturnNode(ErrorData err)
+: ASTNode(err) {}
 
 ReturnNode::~ReturnNode() {
     delete expression;
@@ -185,14 +189,14 @@ ASTNode* ReturnNode::FindReturn() {
     return this;
 }
 
-ParamsListNode::ParamsListNode(ASTNode* param, int line)
-: ASTNode(line)
+ParamsListNode::ParamsListNode(ASTNode* param, ErrorData err)
+: ASTNode(err)
 {
     parameters = new std::vector<VarDeclNode*> ();
     parameters->push_back(static_cast<VarDeclNode*>(param));
 }
-ParamsListNode::ParamsListNode(int line)
-: ASTNode(line)
+ParamsListNode::ParamsListNode(ErrorData err)
+: ASTNode(err)
 {
     parameters = new std::vector<VarDeclNode*> ();
 }
@@ -227,8 +231,8 @@ void ParamsListNode::TypeCheck() {
     }
 }
 
-FuncDefListNode::FuncDefListNode(int line) 
-: ASTNode(line)
+FuncDefListNode::FuncDefListNode(ErrorData err) 
+: ASTNode(err)
 {
     func_def_list = new std::vector<FuncDefNode*> ();
 }
@@ -257,14 +261,14 @@ void FuncDefListNode::setGlobalST(SymbolTable* ST) {
 }
 
 
-LocalDeclListNode::LocalDeclListNode(int line) 
-: ASTNode(line)
+LocalDeclListNode::LocalDeclListNode(ErrorData err) 
+: ASTNode(err)
 {
     decl_list = new std::vector<VarDeclNode*>();
 }
 
-LocalDeclListNode::LocalDeclListNode(ASTNode* decl, int line)
-: ASTNode(line) 
+LocalDeclListNode::LocalDeclListNode(ASTNode* decl, ErrorData err)
+: ASTNode(err) 
 {
     decl_list = new std::vector<VarDeclNode*>();
     decl_list->push_back(static_cast<VarDeclNode*>(decl));
@@ -300,8 +304,8 @@ void LocalDeclListNode::setLocalST(SymbolTable* ST) {
     }
 }
 
-VarDeclNode::VarDeclNode(ASTNode* id, ASTNode* t, int line)
-: ASTNode(line)
+VarDeclNode::VarDeclNode(ASTNode* id, ASTNode* t, ErrorData err)
+: ASTNode(err)
 {
     identifier = static_cast<IdentifierNode*>(id);
     type = static_cast<TypeNode*>(t);
@@ -319,7 +323,7 @@ void VarDeclNode::TypeCheck() {
         // std::cout << lexeme << " : " << typeToString(getType()) << '\n';
     }
     else {
-        error( lineno, "identifier '" + lexeme + "' redeclared.");
+        error( err_data, "identifier '" + lexeme + "' redeclared");
     }
 }
 
@@ -333,8 +337,8 @@ void VarDeclNode::setLocalST(SymbolTable* ST) {
     identifier->setLocalST(ST);
 }
 
-ArrayDeclNode::ArrayDeclNode(ASTNode* id, ASTNode* tp, ASTNode* len, int line)
-: ASTNode(line) {
+ArrayDeclNode::ArrayDeclNode(ASTNode* id, ASTNode* tp, ASTNode* len, ErrorData err)
+: ASTNode(err) {
     identifier = static_cast<IdentifierNode*>(id);
     type = static_cast<TypeNode*>(tp);
     length = static_cast<NumberNode*>(len);
@@ -369,12 +373,12 @@ void ArrayDeclNode::TypeCheck() {
         // std::cout << lexeme << " : " << typeToString(getType()) << '\n';
     }
     else {
-        error(lineno, "identifier '" + lexeme + "' redeclared.");
+        error(err_data, "identifier '" + lexeme + "' redeclared");
     }
 }
 
-ArrayLiteralNode::ArrayLiteralNode(ASTNode* expression, int line)
-: ASTNode(line)
+ArrayLiteralNode::ArrayLiteralNode(ASTNode* expression, ErrorData err)
+: ASTNode(err)
 {
     expressions = new std::vector<ASTNode*>();
     expressions->push_back(expression);
@@ -409,15 +413,15 @@ void ArrayLiteralNode::TypeCheck() {
     if(!expressions->empty()) {
         TypeInfo firstType = expressions->front()->getType();
         if(!(firstType.type == Type::i32 || firstType.type == Type::Bool)) {
-            error(lineno, "invalid array literal: expected bool or i32 but got type '" + typeToString(firstType) + "'.");
+            error(err_data, "invalid array literal: expected bool or i32 but got type '" + typeToString(firstType) + "'");
             return;
         }
         int size = expressions->size();
         // check that all expressions have the same type as the first element
         for(ASTNode* expr : *expressions) { 
             if(expr->getType().type != firstType.type) {
-                error(lineno, "invalid array literal: expected values of type '" + typeToString(firstType) 
-                + "' but got '" + typeToString(expr->getType())+ "'.");
+                error(err_data, "invalid array literal: expected values of type '" + typeToString(firstType) 
+                + "' but got '" + typeToString(expr->getType())+ "'");
                 return;
             }
         }
@@ -431,8 +435,8 @@ void ArrayLiteralNode::TypeCheck() {
 }
 
 
-StatementListNode::StatementListNode(int line)
-: ASTNode(line) 
+StatementListNode::StatementListNode(ErrorData err)
+: ASTNode(err) 
 {
     stmt_list = new std::vector<ASTNode*>();
 }
@@ -483,8 +487,8 @@ std::vector<ASTNode*> StatementListNode::FindReturns() {
 }
 
 
-AssignmentStatementNode::AssignmentStatementNode(ASTNode* id, ASTNode* expr, int line)
-: ASTNode(line) 
+AssignmentStatementNode::AssignmentStatementNode(ASTNode* id, ASTNode* expr, ErrorData err)
+: ASTNode(err) 
 {
     identifier = static_cast<LValueNode*>(id);
     expression = expr;
@@ -501,7 +505,7 @@ void AssignmentStatementNode::TypeCheck() {
     TypeInfo rtype = expression->getType();
     TypeInfo ltype = identifier->getType();
     if(!(ltype.type == rtype.type && ltype.size == rtype.size)) {
-        error(lineno, "cannot assign '" + typeToString(rtype) + "' to type '" + typeToString(ltype) + "'.");
+        error(err_data, "cannot assign '" + typeToString(rtype) + "' to type '" + typeToString(ltype) + "'");
     }
     else {
         identifier->initialize();
@@ -520,14 +524,14 @@ void AssignmentStatementNode::setLocalST(SymbolTable* ST) {
     expression->setLocalST(ST);
 }
 
-ActualArgsNode::ActualArgsNode(int line) 
-: ASTNode(line) 
+ActualArgsNode::ActualArgsNode(ErrorData err) 
+: ASTNode(err) 
 {
     actual_args = new std::vector<ASTNode*>();
 }
 
-ActualArgsNode::ActualArgsNode(ASTNode* arg, int line)
-: ASTNode(line) 
+ActualArgsNode::ActualArgsNode(ASTNode* arg, ErrorData err)
+: ASTNode(err) 
 {
     actual_args = new std::vector<ASTNode*>();
     actual_args->push_back(arg);
@@ -566,8 +570,8 @@ std::vector<TypeInfo> ActualArgsNode::argTypes() {
     return types;
 }
 
-CallNode::CallNode(ASTNode* id, ASTNode* act_args, int line) 
-: ASTNode(line)
+CallNode::CallNode(ASTNode* id, ASTNode* act_args, ErrorData err) 
+: ASTNode(err)
 {
     identifier = static_cast<IdentifierNode*>(id);
     actual_args = static_cast<ActualArgsNode*>(act_args);
@@ -601,26 +605,26 @@ void CallNode::TypeCheck() {
     std::string lexeme = identifier->getLexeme();
     FunctionInfo* funcInfo = static_cast<FunctionInfo*>(GlobalST->lookup(lexeme));
     if(!funcInfo) { // the function is not defined
-        error(lineno, "undefined function '" + lexeme + "'.");
+        error(err_data, "undefined function '" + lexeme + "'");
         return;
     }
     std::vector<TypeInfo> funcParams = funcInfo->getParamList();
     if(args.size() != funcParams.size()) {
-        std::string msg = "wrong number of arguments: expected " + std::to_string(funcParams.size()) + " but got " + std::to_string(args.size())+ ".";
-        error(lineno, msg);
+        std::string msg = "wrong number of arguments: expected " + std::to_string(funcParams.size()) + " but got " + std::to_string(args.size())+ "";
+        error(err_data, msg);
     }
     else {
         for(std::size_t i=0; i<funcParams.size(); ++i) {
             if(!(funcParams[i].type == args[i].type)) {
-                error(lineno, "wrong type of arguments. Expected " + typeToString(funcParams) + 
-                " but got " + typeToString(args) + ".");
+                error(err_data, "wrong type of arguments. Expected " + typeToString(funcParams) + 
+                " but got " + typeToString(args) + "");
             }
         }
     }
 }
 
-ArrayAccessNode::ArrayAccessNode(ASTNode* id, ASTNode* expr, int line) 
-: LValueNode(line) 
+ArrayAccessNode::ArrayAccessNode(ASTNode* id, ASTNode* expr, ErrorData err) 
+: LValueNode(err) 
 {
     identifier = static_cast<IdentifierNode*>(id);
     expression = expr;
@@ -658,7 +662,7 @@ void ArrayAccessNode::TypeCheck() {
     expression->TypeCheck();
     Type exprType = expression->getType().type;
     if(exprType != Type::i32) {
-        error(lineno, "cannot use type '" + typeToString(exprType) + "' for array access.");
+        error(err_data, "cannot use type '" + typeToString(exprType) + "' for array access");
     }
 }
 
@@ -666,8 +670,8 @@ void ArrayAccessNode::initialize() {
     identifier->initialize();
 }
 
-IfStatementNode::IfStatementNode(ASTNode* expr, ASTNode* if_, ASTNode* else_, int line) 
-: ASTNode(line) 
+IfStatementNode::IfStatementNode(ASTNode* expr, ASTNode* if_, ASTNode* else_, ErrorData err) 
+: ASTNode(err) 
 {
     expression = expr;
     if_branch = static_cast<StatementListNode*>(if_);
@@ -701,7 +705,7 @@ void IfStatementNode::setLocalST(SymbolTable* ST) {
 void IfStatementNode::TypeCheck() {
     expression->TypeCheck();
     if(expression->getType().type != Type::Bool) {
-        error(lineno, "expected boolean condition but got '" + typeToString(expression->getType()) + "'.");
+        error(err_data, "expected boolean condition but got '" + typeToString(expression->getType()) + "'");
     }
     if_branch->TypeCheck();
     if (else_branch) {
@@ -709,8 +713,8 @@ void IfStatementNode::TypeCheck() {
     }
 }
 
-WhileStatementNode::WhileStatementNode(ASTNode* expr, ASTNode* stmts, int line)
-: ASTNode(line)
+WhileStatementNode::WhileStatementNode(ASTNode* expr, ASTNode* stmts, ErrorData err)
+: ASTNode(err)
 {
     expression = expr;
     body = static_cast<StatementListNode*>(stmts);
@@ -736,13 +740,13 @@ void WhileStatementNode::setLocalST(SymbolTable* ST) {
 void WhileStatementNode::TypeCheck() {
     expression->TypeCheck();
     if(expression->getType().type != Type::Bool) {
-        error(lineno, "expected boolean condition but got '" + typeToString(expression->getType()) + "'.");
+        error(err_data, "expected boolean condition but got '" + typeToString(expression->getType()) + "'");
     }
     body->TypeCheck();
 }
 
-PrintStatementNode::PrintStatementNode(ASTNode* args, bool ln, int line)
-: ASTNode(line)
+PrintStatementNode::PrintStatementNode(ASTNode* args, bool ln, ErrorData err)
+: ASTNode(err)
 {
     newline = ln;
     actual_args = static_cast<ActualArgsNode*>(args);
@@ -768,14 +772,14 @@ void PrintStatementNode::TypeCheck() {
     std::vector<TypeInfo> types = actual_args->argTypes();
     for(TypeInfo typeInfo : types) {
         if(!(typeInfo.type == Type::i32 || typeInfo.type == Type::Bool)) {
-            error(lineno, "cannot print type '" + typeToString(typeInfo) + "'.");
+            error(err_data, "cannot print type '" + typeToString(typeInfo) + "'");
         }
     }
 }
 
 
-UnaryNode::UnaryNode(std::string oper, ASTNode* r, int line)
-: ASTNode(line) 
+UnaryNode::UnaryNode(std::string oper, ASTNode* r, ErrorData err)
+: ASTNode(err) 
 {
     op = oper;
     right = r;
@@ -800,14 +804,14 @@ void UnaryNode::TypeCheck() {
     right->TypeCheck();
     TypeInfo opType = GetOpType(op).op_type;
     if(right->getType().type != opType.type) {
-        error(lineno, "cannot apply operator " + op + 
+        error(err_data, "cannot apply operator " + op + 
             " to type " + typeToString(right->getType()));
     }
 }
 
 
-BinaryNode::BinaryNode(std::string oper, ASTNode* l, ASTNode* r, int line)
-: ASTNode(line)
+BinaryNode::BinaryNode(std::string oper, ASTNode* l, ASTNode* r, ErrorData err)
+: ASTNode(err)
 {
     op = oper;
     left = l;
@@ -837,7 +841,7 @@ bool BinaryNode::BoolInt(TypeInfo t) {
         return true;
     }
     else {
-        error(lineno, "cannot apply operator " + op + " to type " + typeToString(t));
+        error(err_data, "cannot apply operator " + op + " to type " + typeToString(t));
         return false;
     }
 }
@@ -852,22 +856,22 @@ void BinaryNode::TypeCheck() {
     BoolInt(rType);
     // check that both operands are the same type
     if(!(lType.type == rType.type && lType.size == rType.size)) {
-        error(lineno, "incompatible types '" + typeToString(lType) + "' and '" + typeToString(rType) + "'.");
+        error(err_data, "incompatible types '" + typeToString(lType) + "' and '" + typeToString(rType) + "'");
     }
     // check that both operands are compatible with the operator
     TypeInfo opType = GetOpType(op).op_type;
     if(lType.type != opType.type && opType.type != Type::any) {
-        error(lineno, "ltype '" + typeToString(lType) + "' not compatible with operator '" + op + "'.");
+        error(err_data, "ltype '" + typeToString(lType) + "' not compatible with operator '" + op + "'");
     }
     if(rType.type != opType.type && opType.type != Type::any) {
-        error(lineno, "rtype '" + typeToString(rType) + "' not compatible with operator '" + op + "'.");
+        error(err_data, "rtype '" + typeToString(rType) + "' not compatible with operator '" + op + "'");
     }
 
 }
 
 
-IdentifierNode::IdentifierNode(std::string lexeme, int line)
-    : LValueNode(line), lexeme(lexeme) {}
+IdentifierNode::IdentifierNode(std::string lexeme, ErrorData err)
+    : LValueNode(err), lexeme(lexeme) {}
 
 IdentifierNode::~IdentifierNode() {}
 
@@ -879,11 +883,11 @@ void IdentifierNode::TypeCheck() {
     IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
     if(info) { // identifier exists in local symbol table
         if(!info->initialized) {  // identifier is initialized
-            error(lineno, "Identifier '" + lexeme + "' not initialized.");
+            error(err_data, "Identifier '" + lexeme + "' not initialized");
         }
     }
     else {
-        error(lineno, "Identifier '" + lexeme + "' not found.");
+        error(err_data, "Identifier '" + lexeme + "' not found");
     }
 }
 
@@ -893,7 +897,7 @@ TypeInfo IdentifierNode::getType() {
         return info->getReturnType();
     }
     else {
-        error(lineno, "identifier '" + lexeme + "' not found.");
+        error(err_data, "identifier '" + lexeme + "' not found");
     }
     return Type::none;
 }
@@ -911,15 +915,15 @@ void IdentifierNode::setLocalST(SymbolTable* ST) {
     LocalST = ST;
 }
 
-TypeNode::TypeNode(TypeInfo t, int line) 
-: ASTNode(line) 
+TypeNode::TypeNode(TypeInfo t, ErrorData err) 
+: ASTNode(err) 
 {
     setType(t);
 }
 TypeNode::~TypeNode() {}
 
-NumberNode::NumberNode(int val, int line)
-: ASTNode(line) 
+NumberNode::NumberNode(int val, ErrorData err)
+: ASTNode(err) 
 {
     setType(Type::i32);
     value = val;
@@ -929,8 +933,8 @@ int NumberNode::getValue() {
     return value;
 }
 
-BoolNode::BoolNode(bool val, int line)
-: ASTNode(line) 
+BoolNode::BoolNode(bool val, ErrorData err)
+: ASTNode(err) 
 {
     setType(Type::Bool);
     value = val;

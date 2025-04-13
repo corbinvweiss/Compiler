@@ -32,7 +32,7 @@ std::string typeToString(TypeInfo t) {
         }
         return repr;
     }
-    return "Unknown Type";
+    return "none";
 }
 
 std::string typeToString(std::vector<TypeInfo> types) {
