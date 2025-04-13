@@ -1,43 +1,25 @@
 # Compiler
-Code for Compiler Construction W25
+Code for Compiler Construction W25.
 
-## Parsing
-The code for the parsing assignment is in A03/SimpleRustish. The intent is to start small and gradually expand the grammar.
+Compiling Rustish code into MIPS machine code.
 
-To run the parser run the following commands in A03/SimpleRustish:
+The compiler is built up in phases. 
+- A0 is a symbol table example
+- A02 is a lexer that outputs tokens
+- A03 is a parser that outputs a parsetree representation of code
+- A04 constructs an Abstract Syntax tree.
+
+## Run the Compiler
+To run the compiler, navigate to the appropriate directory and execute the following commands:
 ```
 make all
-./rustish sample/tst.ri
+./rustish sample/test.ri
 ```
 When you are done run
 ```
 make clean
 ```
+The rustish compiler should be able to handle all tests in the `sample/` directory. 
 
-The parser can handle all of the code included in `sample/`
-
-## Arrays
-```
-let mut b: i32;
-let mut a: [i32; 5];
-a[2] = 0;
-b = a[2];
-```
-The grammar rule for an array declaration needs to be 
-```
-array_decl  : LET MUT identifier COLON LBRACKET type SEMICOLON number RBRACKET SEMICOLON
-```
-The rule for assignment to an array
-```
-assignment_statement: array_access ASSIGN expression SEMICOLON
-```
-The rule for assignment from array
-```
-assignment_statement: identifier ASSIGN array_access SEMICOLON
-```
-where 
-```
-array_access : identifier LSQBRACK expression RSQBRACK
-```
-
-In this case the assignment from an array is just like any other assignment.
+## Notes
+For more details on any of the pieces of the compiler, see the readme in their directory.
