@@ -56,5 +56,21 @@ error [line 13]: incompatible types 'i32' and 'bool'.
 error [line 13]: rtype 'bool' not compatible with operator '>'.
 ```
 
+## Arrays
+This AST constructor supports arrays:
+```
+let mut arr: [i32; 5];
+```
+creates an array of 5 integers.
 
-
+It supports both indexed and literal initialization:
+```
+arr[0] = 5;                // indexed
+arr = [0, 1, 2, 3, f(4)]   // literal initialization. Valid provided f returns an i32.
+```
+- Indexed intialization is valid if the rvalue's type matches the array's type.
+- Literal initialization is valid if the number of values matches the length of the array, and the type of the values all match the array's type.
+- Indexed array access bound checking will be a runtime error because the index may not be known at compile time. For example,
+```
+arr[f(4)] = arr[0];
+```
