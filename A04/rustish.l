@@ -131,9 +131,3 @@ eol    \n
 void lex_error(int line, std::string msg) {
     std::cout << "error [line " << line << "]: "  << msg << '\n';
 }
-
-
-void yyerror(const char *s) {
-    std::cout << s << '\n';
-}
-

@@ -12,7 +12,7 @@
 
 int yylex();
 int yyparse();
-void yyerror(const char *s);
+void yyerror (char const *str);
 
 extern FILE *yyin;
 extern char* yytext;
@@ -20,6 +20,9 @@ extern int yylineno;
 %}
 
 /* BISON Declarations */
+%define parse.error verbose
+
+
 %token MAIN LCURLY RCURLY IDENTIFIER SEMICOLON NUMBER ASSIGN PRINT COMMA
     PRINTLN ARROW COLON FN I32 BOOL LET MUT FALSE TRUE LPAREN RPAREN 
     PLUS MINUS TIMES DIVIDE MODULUS AND OR NOT IF ELSE WHILE RETURN
@@ -32,6 +35,13 @@ extern int yylineno;
 %left PLUS MINUS MODULUS    
 %left TIMES DIVIDE          
 %left NOT                  /* Higher precedence */
+
+// locations for error reporting from 
+// https://www.gnu.org/software/bison/manual/html_node/Error-Reporting-Function.html
+// %locations %define api.pure full
+// https://www.gnu.org/software/bison/manual/html_node/Location-Type.html
+// %define api.location.type {location_t}
+
 %%
 
 /* Grammar rules */
@@ -311,4 +321,8 @@ int main(int argc, char **argv) {
 
     fclose(yyin);
     return 0;
+}
+
+void yyerror (char const *str) {
+    std::cout << "error [line " << yylineno << "]: " << str << ".\n";
 }
