@@ -17,6 +17,7 @@ The owners of the symbol tables create them and share them with their children u
 #include <string>
 #include "SymbolTable.h"
 #include <iostream>
+#include "ErrorData.h"
 
 struct OpType {
     TypeInfo op_type;
@@ -57,11 +58,11 @@ class ASTNode {
     private:
         TypeInfo _type = Type::none;
     public:
-        int lineno;
+        ErrorData err_data;
         SymbolTable* GlobalST;
         SymbolTable* LocalST;
 
-        ASTNode(int line);
+        ASTNode(ErrorData);
         virtual ~ASTNode() = default;
         virtual void setGlobalST(SymbolTable* ST) {};
         virtual void setLocalST(SymbolTable* ST) {};
@@ -81,8 +82,8 @@ class NumberNode: public ASTNode {
     private:
         int value;
     public:
-        NumberNode(int value, int line);
-        NumberNode(bool value, int line);
+        NumberNode(int value, ErrorData err);
+        NumberNode(bool value, ErrorData err);
         ~NumberNode();
         int getValue();
 };
@@ -91,15 +92,15 @@ class BoolNode: public ASTNode {
     private:
         bool value;
     public:
-        BoolNode(int value, int line);
-        BoolNode(bool value, int line);
+        BoolNode(int value, ErrorData err);
+        BoolNode(bool value, ErrorData err);
         ~BoolNode();
         bool getValue();
 };
 
 class TypeNode: public ASTNode {
     public:
-        TypeNode(TypeInfo t, int line);
+        TypeNode(TypeInfo t, ErrorData err);
         ~TypeNode();
 };
 
@@ -108,7 +109,7 @@ class ArrayLiteralNode: public ASTNode {
     private:
         std::vector<ASTNode*>* expressions;
     public:
-        ArrayLiteralNode(ASTNode* expression, int line);
+        ArrayLiteralNode(ASTNode* expression, ErrorData err);
         ~ArrayLiteralNode();
         void append(ASTNode* expression);
         void setGlobalST(SymbolTable* ST) override;
@@ -119,14 +120,14 @@ class ArrayLiteralNode: public ASTNode {
 class LValueNode: public ASTNode {
     public:
         virtual void initialize() = 0; // initialize the identifier or array
-        LValueNode(int line): ASTNode(line) {}
+        LValueNode(ErrorData err): ASTNode(err) {}
 };
 
 class IdentifierNode: public LValueNode {
     private:
         std::string lexeme;
     public:
-        IdentifierNode(std::string id, int line);
+        IdentifierNode(std::string id, ErrorData err);
         ~IdentifierNode();
         std::string getLexeme();
         TypeInfo getType() override;
@@ -141,7 +142,7 @@ class ArrayAccessNode: public LValueNode {
         IdentifierNode* identifier;
         ASTNode* expression;
     public:
-        ArrayAccessNode(ASTNode* id, ASTNode* expr, int line);
+        ArrayAccessNode(ASTNode* id, ASTNode* expr, ErrorData err);
         ~ArrayAccessNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
@@ -155,7 +156,7 @@ class VarDeclNode: public ASTNode {
         IdentifierNode* identifier;
         TypeNode* type;
     public:
-        VarDeclNode(ASTNode* id, ASTNode* t, int line);
+        VarDeclNode(ASTNode* id, ASTNode* t, ErrorData err);
         ~VarDeclNode();
         void TypeCheck() override;
         void setGlobalST(SymbolTable* ST) override;
@@ -168,7 +169,7 @@ class ArrayDeclNode: public ASTNode {
         TypeNode* type;
         NumberNode* length;
     public:
-        ArrayDeclNode(ASTNode* id, ASTNode* tp, ASTNode* len, int line);
+        ArrayDeclNode(ASTNode* id, ASTNode* tp, ASTNode* len, ErrorData err);
         ~ArrayDeclNode();
         void TypeCheck() override;
         void setGlobalST(SymbolTable* ST) override;
@@ -181,7 +182,7 @@ class AssignmentStatementNode: public ASTNode {
         LValueNode* identifier;
         ASTNode* expression;
     public:
-        AssignmentStatementNode(ASTNode* identifier, ASTNode* expr, int line);
+        AssignmentStatementNode(ASTNode* identifier, ASTNode* expr, ErrorData err);
         ~AssignmentStatementNode();
         void TypeCheck() override;
         void setGlobalST(SymbolTable* ST) override;
@@ -192,7 +193,7 @@ class StatementListNode: public ASTNode {
     private:
         std::vector<ASTNode*> * stmt_list;
     public:
-        StatementListNode(int line);
+        StatementListNode(ErrorData err);
         ~StatementListNode();
         void TypeCheck() override;
         void append(ASTNode* stmt);
@@ -205,8 +206,8 @@ class LocalDeclListNode: public ASTNode {
     private:
         std::vector<VarDeclNode*> * decl_list;
     public:
-        LocalDeclListNode(int lineno);
-        LocalDeclListNode(ASTNode* decl, int line);
+        LocalDeclListNode(ErrorData err);
+        LocalDeclListNode(ASTNode* decl, ErrorData err);
         ~LocalDeclListNode();
         void TypeCheck() override;
         void append(ASTNode* decl);
@@ -219,7 +220,7 @@ class MainDefNode: public ASTNode {
         LocalDeclListNode* local_decl_list;
         StatementListNode* stmt_list;
     public:
-        MainDefNode(ASTNode* local_decl_list, ASTNode* stmt_list, int line);
+        MainDefNode(ASTNode* local_decl_list, ASTNode* stmt_list, ErrorData err);
         ~MainDefNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
@@ -230,8 +231,8 @@ class ParamsListNode: public ASTNode {
     private: 
         std::vector<VarDeclNode*>* parameters;
     public:
-        ParamsListNode(int line);
-        ParamsListNode(ASTNode* param, int line);
+        ParamsListNode(ErrorData err);
+        ParamsListNode(ASTNode* param, ErrorData err);
         ~ParamsListNode();
         void append(ASTNode* parameter);
         std::vector<TypeInfo> getTypes();   // return the types of the parameters
@@ -248,7 +249,7 @@ class FuncDefNode: public ASTNode {
         LocalDeclListNode* local_decl_list;
         StatementListNode* stmt_list;
     public:
-        FuncDefNode(ASTNode* id, ASTNode* params, ASTNode* type, ASTNode* decl_list, ASTNode* stmt_list, int line);
+        FuncDefNode(ASTNode* id, ASTNode* params, ASTNode* type, ASTNode* decl_list, ASTNode* stmt_list, ErrorData err);
         ~FuncDefNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
@@ -260,8 +261,8 @@ class ReturnNode: public ASTNode {
     private: 
         ASTNode* expression;
     public:
-        ReturnNode(ASTNode* expr, int line);
-        ReturnNode(int line);
+        ReturnNode(ASTNode* expr, ErrorData err);
+        ReturnNode(ErrorData err);
         ~ReturnNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
@@ -273,8 +274,8 @@ class ActualArgsNode: public ASTNode {
     private:
         std::vector<ASTNode*>* actual_args;
     public:
-        ActualArgsNode(int line);
-        ActualArgsNode(ASTNode* arg, int line);
+        ActualArgsNode(ErrorData err);
+        ActualArgsNode(ASTNode* arg, ErrorData err);
         ~ActualArgsNode();
         void append(ASTNode* arg);
         void setGlobalST(SymbolTable* ST) override;
@@ -287,7 +288,7 @@ class CallNode: public ASTNode {
         IdentifierNode* identifier;
         ActualArgsNode* actual_args;
     public:
-        CallNode(ASTNode* id, ASTNode* act_args, int line);
+        CallNode(ASTNode* id, ASTNode* act_args, ErrorData err);
         ~CallNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
@@ -301,7 +302,7 @@ class IfStatementNode: public ASTNode {
         StatementListNode* if_branch;
         StatementListNode* else_branch;
     public:
-        IfStatementNode(ASTNode* expr, ASTNode* if_, ASTNode* else_, int line);
+        IfStatementNode(ASTNode* expr, ASTNode* if_, ASTNode* else_, ErrorData err);
         ~IfStatementNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
@@ -313,7 +314,7 @@ class WhileStatementNode: public ASTNode {
         ASTNode* expression;
         StatementListNode* body;
     public:
-        WhileStatementNode(ASTNode* expr, ASTNode* body, int line);
+        WhileStatementNode(ASTNode* expr, ASTNode* body, ErrorData err);
         ~WhileStatementNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
@@ -325,7 +326,7 @@ class PrintStatementNode: public ASTNode {
         bool newline;
         ActualArgsNode* actual_args;
     public:
-    PrintStatementNode(ASTNode* args, bool ln, int line);
+    PrintStatementNode(ASTNode* args, bool ln, ErrorData err);
     ~PrintStatementNode();
     void setGlobalST(SymbolTable* ST) override;
     void setLocalST(SymbolTable* ST) override;
@@ -337,7 +338,7 @@ class UnaryNode : public ASTNode {
         std::string op;
         ASTNode* right;
     public:
-        UnaryNode(std::string op, ASTNode* r, int line);
+        UnaryNode(std::string op, ASTNode* r, ErrorData err);
         ~UnaryNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
@@ -350,7 +351,7 @@ class BinaryNode : public ASTNode {
         ASTNode* left;
         ASTNode* right;
     public:
-        BinaryNode(std::string op, ASTNode* l, ASTNode* r, int line);
+        BinaryNode(std::string op, ASTNode* l, ASTNode* r, ErrorData err);
         ~BinaryNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
@@ -362,7 +363,7 @@ class FuncDefListNode: public ASTNode {
     private:
         std::vector<FuncDefNode*>* func_def_list;
     public:
-        FuncDefListNode(int line);
+        FuncDefListNode(ErrorData err);
         ~FuncDefListNode();
         void append(ASTNode* func_def);
         void TypeCheck() override;
