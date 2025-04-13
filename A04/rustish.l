@@ -9,7 +9,7 @@
 #include "rustish.tab.hpp"
 extern int yylval;
 void reset_cin();
-
+void lex_error(int, std::string);
 %}
 
 %option noyywrap
@@ -116,7 +116,10 @@ eol    \n
             }
             
 .           {
-               /*yytext[0];*/ 
+               std::string msg = "unexpected symbol '";
+               msg += yytext;
+               msg += "'.";
+               lex_error(yylineno, msg);
             }
 
 %%
@@ -124,6 +127,10 @@ eol    \n
 //int yywrap() {
 //    return 0;
 //}
+
+void lex_error(int line, std::string msg) {
+    std::cout << "error [line " << line << "]: "  << msg << '\n';
+}
 
 
 void yyerror(const char *s) {
