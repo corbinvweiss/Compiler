@@ -8,7 +8,7 @@ fn f(a: bool) -> bool {}
 
 fn empty() {} 
 
-fn args_only(num: i32, b: bool) {
+fn args_only(num: i32, b: bool, num: i32) {
 
 }
 
