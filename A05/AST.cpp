@@ -15,6 +15,8 @@ Each function owns its LocalST, and shares both the GlobalST and LocalST with it
 #include "AST.h"
 #include <iostream>
 
+static FILE* FDOUT;   // file descriptor of a.s output file
+
 int ERROR_COUNT;
 void error(ErrorData err, std::string msg)
 {
@@ -27,14 +29,16 @@ void error(ErrorData err, std::string msg)
 
 ASTNode::ASTNode(ErrorData err) :err_data(err) {}
 
-ProgramNode::ProgramNode(ASTNode* func_list, ASTNode* main) 
+ProgramNode::ProgramNode(ASTNode* func_list, ASTNode* main, FILE* fdout) 
 : ASTNode(ErrorData(nullptr, 0, 0))
 {
+    FDOUT = fdout;
     func_def_list = static_cast<FuncDefListNode*>(func_list);
     main_def = static_cast<MainDefNode*>(main);
     setGlobalST(new SymbolTable());
     func_def_list->TypeCheck();
     main_def->TypeCheck();
+    EmitCode();
 }
 
 ProgramNode::~ProgramNode() {
@@ -52,6 +56,15 @@ void ProgramNode::setLocalST(SymbolTable* ST) {
     LocalST = ST;
     func_def_list->setLocalST(ST);
     main_def->setLocalST(ST);
+}
+
+void ProgramNode::EmitCode() {
+    std::cout << "Emitting code for ProgramNode\n";
+    fprintf(FDOUT, "\t.data\n");
+    fprintf(FDOUT, "\tmessage: .asciiz \"Hello world!\"\t# define a test string\n");
+    fprintf(FDOUT, "\t.align 2\n");
+    fprintf(FDOUT, "\t.text\n");
+    main_def->EmitCode();
 }
 
 MainDefNode::MainDefNode(ASTNode* decl_list, ASTNode* stmts, ErrorData err) 
@@ -80,6 +93,16 @@ void MainDefNode::setLocalST(SymbolTable* ST) {
 void MainDefNode::TypeCheck() {
     local_decl_list->TypeCheck();
     stmt_list->TypeCheck();
+}
+
+void MainDefNode::EmitCode() {
+    std::cout << "Emitting code for MainDefNode\n";
+    fprintf(FDOUT, "\n\t### *** MAIN DEFINITION *** ###\n");
+    fprintf(FDOUT, "_main:\n");
+    stmt_list->EmitCode();
+    fprintf(FDOUT, "\n\t### *** END OF MAIN *** ###\n");
+    fprintf(FDOUT, "\tli $v0, 10\t#load value for exit\n");
+    fprintf(FDOUT, "\tsyscall   \t#exit the program\n");
 }
 
 FuncDefNode::FuncDefNode(ASTNode* id, ASTNode* params, ASTNode* type, ASTNode* decl_list, ASTNode* stmts, ErrorData err) 
@@ -153,6 +176,10 @@ void FuncDefNode::CheckReturn() {
     }
 }
 
+void FuncDefNode::EmitCode() {
+    std::cout << "Emitting code for FuncDefNode\n";
+}
+
 ReturnNode::ReturnNode(ASTNode* expr, ErrorData err)
 : ASTNode(err) 
 {
@@ -187,6 +214,10 @@ void ReturnNode::TypeCheck() {
 
 ASTNode* ReturnNode::FindReturn() {
     return this;
+}
+
+void ReturnNode::EmitCode() {
+    std::cout << "Emitting code for ReturnNode\n";
 }
 
 ParamsListNode::ParamsListNode(ASTNode* param, ErrorData err)
@@ -231,6 +262,10 @@ void ParamsListNode::TypeCheck() {
     }
 }
 
+void ParamsListNode::EmitCode() {
+    std::cout << "Emitting code for ParamsListNode\n";
+}
+
 FuncDefListNode::FuncDefListNode(ErrorData err) 
 : ASTNode(err)
 {
@@ -258,6 +293,10 @@ void FuncDefListNode::setGlobalST(SymbolTable* ST) {
     for(FuncDefNode* func_def : *func_def_list) {
         func_def->setGlobalST(ST);
     }
+}
+
+void FuncDefListNode::EmitCode() {
+    std::cout << "Emitting code for FuncDefListNode\n";
 }
 
 
@@ -304,6 +343,13 @@ void LocalDeclListNode::setLocalST(SymbolTable* ST) {
     }
 }
 
+void LocalDeclListNode::EmitCode() {
+    std::cout << "Emitting code for LocalDeclListNode\n";
+    for(VarDeclNode* decl : *decl_list) {
+        decl->EmitCode();
+    }
+}
+
 VarDeclNode::VarDeclNode(ASTNode* id, ASTNode* t, ErrorData err)
 : ASTNode(err)
 {
@@ -335,6 +381,10 @@ void VarDeclNode::setGlobalST(SymbolTable* ST) {
 void VarDeclNode::setLocalST(SymbolTable* ST) {
     LocalST = ST;
     identifier->setLocalST(ST);
+}
+
+void VarDeclNode::EmitCode() {
+    std::cout << "Emitting code for VarDeclNode\n";
 }
 
 ArrayDeclNode::ArrayDeclNode(ASTNode* id, ASTNode* tp, ASTNode* len, ErrorData err)
@@ -375,6 +425,10 @@ void ArrayDeclNode::TypeCheck() {
     else {
         error(err_data, "identifier '" + lexeme + "' redeclared");
     }
+}
+
+void ArrayDeclNode::EmitCode() {
+    std::cout << "Emitting code for ArrayDeclNode\n";
 }
 
 ArrayLiteralNode::ArrayLiteralNode(ASTNode* expression, ErrorData err)
@@ -434,6 +488,10 @@ void ArrayLiteralNode::TypeCheck() {
     }
 }
 
+void ArrayLiteralNode::EmitCode() {
+    std::cout << "Emitting code for ArrayLiteralNode\n";
+}
+
 
 StatementListNode::StatementListNode(ErrorData err)
 : ASTNode(err) 
@@ -486,6 +544,13 @@ std::vector<ASTNode*> StatementListNode::FindReturns() {
     return returns;
 }
 
+void StatementListNode::EmitCode() {
+    std::cout << "Emitting code for StatementListNode\n";
+    for(ASTNode* stmt: *stmt_list) {
+        stmt->EmitCode();
+    }
+}
+
 
 AssignmentStatementNode::AssignmentStatementNode(ASTNode* id, ASTNode* expr, ErrorData err)
 : ASTNode(err) 
@@ -522,6 +587,10 @@ void AssignmentStatementNode::setLocalST(SymbolTable* ST) {
     LocalST = ST;
     identifier->setLocalST(ST);
     expression->setLocalST(ST);
+}
+
+void AssignmentStatementNode::EmitCode() {
+    std::cout << "Emitting code for AssignmentStatementNode\n";
 }
 
 ActualArgsNode::ActualArgsNode(ErrorData err) 
@@ -568,6 +637,10 @@ std::vector<TypeInfo> ActualArgsNode::argTypes() {
         types.push_back(arg->getType());
     }
     return types;
+}
+
+void ActualArgsNode::EmitCode() {
+    std::cout << "Emitting code for ActualArgsNode\n";
 }
 
 CallNode::CallNode(ASTNode* id, ASTNode* act_args, ErrorData err) 
@@ -623,6 +696,10 @@ void CallNode::TypeCheck() {
     }
 }
 
+void CallNode::EmitCode() {
+    std::cout << "Emitting code for CallNode\n";
+}
+
 ArrayAccessNode::ArrayAccessNode(ASTNode* id, ASTNode* expr, ErrorData err) 
 : LValueNode(err) 
 {
@@ -670,6 +747,10 @@ void ArrayAccessNode::initialize() {
     identifier->initialize();
 }
 
+void ArrayAccessNode::EmitCode() {
+    std::cout << "Emitting code for ArrayAccessNode\n";
+}
+
 IfStatementNode::IfStatementNode(ASTNode* expr, ASTNode* if_, ASTNode* else_, ErrorData err) 
 : ASTNode(err) 
 {
@@ -713,6 +794,10 @@ void IfStatementNode::TypeCheck() {
     }
 }
 
+void IfStatementNode::EmitCode() {
+    std::cout << "Emitting code for IfStatementNode\n";
+}
+
 WhileStatementNode::WhileStatementNode(ASTNode* expr, ASTNode* stmts, ErrorData err)
 : ASTNode(err)
 {
@@ -743,6 +828,10 @@ void WhileStatementNode::TypeCheck() {
         error(err_data, "expected boolean condition but got '" + typeToString(expression->getType()) + "'");
     }
     body->TypeCheck();
+}
+
+void WhileStatementNode::EmitCode() {
+    std::cout << "Emitting code for WhileStatementNode\n";
 }
 
 PrintStatementNode::PrintStatementNode(ASTNode* args, bool ln, ErrorData err)
@@ -777,6 +866,15 @@ void PrintStatementNode::TypeCheck() {
     }
 }
 
+void PrintStatementNode::EmitCode() {
+    std::cout << "Emitting code for PrintStatementNode\n";
+    fprintf(FDOUT, "\n\t### PrintStatement ###\n");
+    fprintf(FDOUT, "\tla $a0, message\t#load the message for printing\n");
+    fprintf(FDOUT, "\tli $v0, 4\t# Print String Service\n");
+    fprintf(FDOUT, "\tsyscall  \t# print the string\n");
+
+}
+
 
 UnaryNode::UnaryNode(std::string oper, ASTNode* r, ErrorData err)
 : ASTNode(err) 
@@ -807,6 +905,10 @@ void UnaryNode::TypeCheck() {
         error(err_data, "cannot apply operator " + op + 
             " to type " + typeToString(right->getType()));
     }
+}
+
+void UnaryNode::EmitCode() {
+    std::cout << "Emitting code for UnaryNode\n";
 }
 
 
@@ -869,6 +971,10 @@ void BinaryNode::TypeCheck() {
 
 }
 
+void BinaryNode::EmitCode() {
+    std::cout << "Emitting code for BinaryNode\n";
+}
+
 
 IdentifierNode::IdentifierNode(std::string lexeme, ErrorData err)
     : LValueNode(err), lexeme(lexeme) {}
@@ -915,12 +1021,20 @@ void IdentifierNode::setLocalST(SymbolTable* ST) {
     LocalST = ST;
 }
 
+void IdentifierNode::EmitCode() {
+    std::cout << "Emitting code for IdentifierNode\n";
+}
+
 TypeNode::TypeNode(TypeInfo t, ErrorData err) 
 : ASTNode(err) 
 {
     setType(t);
 }
 TypeNode::~TypeNode() {}
+
+void TypeNode::EmitCode() {
+    std::cout << "Emitting code for TypeNode\n";
+}
 
 NumberNode::NumberNode(int val, ErrorData err)
 : ASTNode(err) 
@@ -933,6 +1047,10 @@ int NumberNode::getValue() {
     return value;
 }
 
+void NumberNode::EmitCode() {
+    std::cout << "Emitting code for NumberNode\n";
+}
+
 BoolNode::BoolNode(bool val, ErrorData err)
 : ASTNode(err) 
 {
@@ -942,4 +1060,8 @@ BoolNode::BoolNode(bool val, ErrorData err)
 BoolNode::~BoolNode() {}
 bool BoolNode::getValue() {
     return value;
+}
+
+void BoolNode::EmitCode() {
+    std::cout << "Emitting code for BoolNode\n";
 }
