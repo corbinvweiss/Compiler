@@ -15,6 +15,10 @@ Each function owns its LocalST, and shares both the GlobalST and LocalST with it
 #include "AST.h"
 #include <iostream>
 
+#define PUSH "\taddi $sp, $sp, -4\t# allocate space on the stack\n\tsw %s, 4($sp)   \t# load the value onto the stack\n"
+
+#define POP "\tlw %s, 4($sp)   \t# pop the stack\n\taddi $sp, $sp, 4 \t# deallocate space on the stack\n"
+
 static FILE* FDOUT;   // file descriptor of a.s output file
 
 int ERROR_COUNT;
@@ -617,6 +621,10 @@ void ActualArgsNode::append(ASTNode* arg) {
     else std::cout << "no actual_args\n";
 }
 
+int ActualArgsNode::getSize() {
+    return actual_args->size();
+}
+
 void ActualArgsNode::setGlobalST(SymbolTable* ST) {
     GlobalST = ST;
     for(ASTNode* arg : *actual_args) {
@@ -641,6 +649,13 @@ std::vector<TypeInfo> ActualArgsNode::argTypes() {
 
 void ActualArgsNode::EmitCode() {
     std::cout << "Emitting code for ActualArgsNode\n";
+    fprintf(FDOUT, "\t### Actual Args ###\n");
+    // The arguments will be pulled off the stack in reverse order,
+    // so we must put them on in reverse order
+    for(auto arg = actual_args->rbegin(); arg != actual_args->rend(); ++arg) {
+        (*arg)->EmitCode();
+        fprintf(FDOUT, PUSH, "$t0");
+    }
 }
 
 CallNode::CallNode(ASTNode* id, ASTNode* act_args, ErrorData err) 
@@ -867,12 +882,23 @@ void PrintStatementNode::TypeCheck() {
 }
 
 void PrintStatementNode::EmitCode() {
+    // get the arguments from the ActualArgsNode
     std::cout << "Emitting code for PrintStatementNode\n";
     fprintf(FDOUT, "\n\t### PrintStatement ###\n");
-    fprintf(FDOUT, "\tla $a0, message\t#load the message for printing\n");
-    fprintf(FDOUT, "\tli $v0, 4\t# Print String Service\n");
-    fprintf(FDOUT, "\tsyscall  \t# print the string\n");
-
+    actual_args->EmitCode();
+    for(int i=0; i<actual_args->getSize(); i++) {
+        fprintf(FDOUT, POP, "$a0");
+        fprintf(FDOUT, "\tli $v0, 1     \t# print integer service\n");
+        fprintf(FDOUT, "\tsyscall       \t# print the number\n");
+        fprintf(FDOUT, "\tli $a0, 0x20  \t# load a space\n");
+        fprintf(FDOUT, "\tli $v0, 11    \t# print character service\n");
+        fprintf(FDOUT, "\tsyscall       \t# print the space\n");
+    }
+    if(newline) {
+        fprintf(FDOUT, "\tli $a0, 0xA  \t# load a newline\n");
+        fprintf(FDOUT, "\tli $v0, 11    \t# print character service\n");
+        fprintf(FDOUT, "\tsyscall       \t# print the newline\n");
+    }
 }
 
 
@@ -1049,6 +1075,7 @@ int NumberNode::getValue() {
 
 void NumberNode::EmitCode() {
     std::cout << "Emitting code for NumberNode\n";
+    fprintf(FDOUT, "\tli, $t0, %d\t\t\t# load the value of the number\n", value);
 }
 
 BoolNode::BoolNode(bool val, ErrorData err)

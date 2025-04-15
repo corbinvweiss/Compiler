@@ -291,6 +291,7 @@ class ActualArgsNode: public ASTNode {
         ActualArgsNode(ASTNode* arg, ErrorData err);
         ~ActualArgsNode();
         void append(ASTNode* arg);
+        int getSize();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
         std::vector<TypeInfo> argTypes();
