@@ -44,16 +44,6 @@ std::string typeToString(std::vector<TypeInfo> types) {
     return result;
 }
 
-std::string LiteralToString(Type type, Literal value) {
-    std::string val = "";
-    if(type==Type::i32 && std::holds_alternative<int>(value)) {
-        val = std::to_string(std::get<int>(value));
-    }
-    else if(type==Type::Bool && std::holds_alternative<bool>(value)) {
-        val = std::to_string(std::get<bool>(value));
-    }
-    return val;
-}
 
 // **********************
 

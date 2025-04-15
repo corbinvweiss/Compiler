@@ -8,7 +8,7 @@
 
 #include <map>
 #include <string>
-#include <variant>
+#include <unordered_map>
 #include "SymbolInfo.h"
 
 
