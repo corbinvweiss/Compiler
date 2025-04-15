@@ -52,8 +52,12 @@ Every ASTNode has a return type, a pointer to the global and local symbol table,
 ```
 7 > false;
 ---
-error [line 13]: incompatible types 'i32' and 'bool'.
-error [line 13]: rtype 'bool' not compatible with operator '>'.
+error line 13, column 14: incompatible types 'i32' and 'bool'
+    7 > false;
+_____________^
+error line 13, column 14: rtype 'bool' not compatible with operator '>'
+    7 > false;
+_____________^
 ```
 
 ## Arrays

@@ -8,7 +8,6 @@ Define the abstract SymbolInfo data structure and its children FunctionInfo and 
 
 #include <string>
 #include <vector>
-#include <climits>
 #define UNKNOWN_ARR INT_MAX
 
 enum TypeError {
@@ -42,8 +41,11 @@ struct TypeInfo {
     : type(t), size(UNKNOWN_ARR) {}
 };
 
+using Literal = std::variant<int, bool>;
+
 std::string typeToString(TypeInfo t);
 std::string typeToString(std::vector<TypeInfo> types);
+std::string LiteralToString(TypeInfo t, Literal l);
 
 /*
 Abstract base class defining structure of SymbolTable entry
