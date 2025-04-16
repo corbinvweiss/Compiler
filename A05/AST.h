@@ -52,7 +52,8 @@ static OpType GetOpType(std::string op) {
     else return OpType(Type::none, Type::none);
 }
 
-// TODO: add return types from each of these
+void begin_func(std::string name);
+void end_func(std::string name);
 
 class ASTNode {
     private:

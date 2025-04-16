@@ -45,7 +45,6 @@ using Literal = std::variant<int, bool>;
 
 std::string typeToString(TypeInfo t);
 std::string typeToString(std::vector<TypeInfo> types);
-std::string LiteralToString(TypeInfo t, Literal l);
 
 /*
 Abstract base class defining structure of SymbolTable entry
@@ -53,16 +52,21 @@ Abstract base class defining structure of SymbolTable entry
 class SymbolInfo {
     private:
         TypeInfo return_type = TypeInfo(Type::none);
+        int stack_offset = 0;
     public:
         SymbolInfo(TypeInfo returnType);
         TypeInfo getReturnType();
         virtual std::string show() = 0; // display the symbol info in a human-readable format
+        int GetOffset() { return stack_offset; }
+        void SetOffset(int value) { stack_offset = value; }
 };
 
 class IdentifierInfo : public SymbolInfo {
-    public:
         bool initialized;
-        IdentifierInfo(TypeInfo t);
+    public:
+        bool IsInitialized() { return initialized; }
+        void Initialize() { initialized = true; }
+        IdentifierInfo(TypeInfo t) : SymbolInfo(t) {}
         std::string show();
 };
 

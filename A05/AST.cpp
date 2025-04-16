@@ -15,9 +15,12 @@ Each function owns its LocalST, and shares both the GlobalST and LocalST with it
 #include "AST.h"
 #include <iostream>
 
-#define PUSH "\taddi $sp, $sp, -4\t# allocate space on the stack\n\tsw %s, 4($sp)   \t# load the value onto the stack\n"
+#define PUSH(reg) \
+    fprintf(FDOUT, "\taddi $sp, $sp, -4\t# allocate space on the stack\n\tsw %s, 4($sp)   \t# load %s onto the stack\n", reg, reg)
 
-#define POP "\tlw %s, 4($sp)   \t# pop the stack\n\taddi $sp, $sp, 4 \t# deallocate space on the stack\n"
+#define POP(reg) \
+    fprintf(FDOUT, "\tlw %s, 4($sp)   \t# pop the stack\n\taddi $sp, $sp, 4 \t# pop stack into %s\n", reg, reg)
+
 
 static FILE* FDOUT;   // file descriptor of a.s output file
 
@@ -29,6 +32,14 @@ void error(ErrorData err, std::string msg)
     for(int i = 0; i < err.column - 1; i++)
         std::cout << "_";
     std::cout << "^\n";
+}
+
+void write(const char* msg, ...) {
+    va_list args;
+    va_start(args, msg);
+    vfprintf(FDOUT, msg, args);
+    va_end(args);
+    fprintf(FDOUT, "\n");
 }
 
 ASTNode::ASTNode(ErrorData err) :err_data(err) {}
@@ -64,10 +75,17 @@ void ProgramNode::setLocalST(SymbolTable* ST) {
 
 void ProgramNode::EmitCode() {
     std::cout << "Emitting code for ProgramNode\n";
-    fprintf(FDOUT, "\t.data\n");
-    fprintf(FDOUT, "\tmessage: .asciiz \"Hello world!\"\t# define a test string\n");
-    fprintf(FDOUT, "\t.align 2\n");
-    fprintf(FDOUT, "\t.text\n");
+    write("\t.data");
+    write("\ttrue: .asciiz \"true\"\t# define the true string");
+    write("\tfalse: .asciiz \"false\"\t# define the false string");
+    write("\t.align 2");
+    write("\t.text");
+    write("\n\t### BEGIN ###");
+    write("\tjal __main\t# jump to the main function");
+    write("\n\t### END ###");
+    write("\tli $v0, 10\t#load value for exit");
+    write("\tsyscall   \t#exit the program");
+
     main_def->EmitCode();
 }
 
@@ -97,17 +115,31 @@ void MainDefNode::setLocalST(SymbolTable* ST) {
 void MainDefNode::TypeCheck() {
     local_decl_list->TypeCheck();
     stmt_list->TypeCheck();
+    LocalST->show();
 }
 
 void MainDefNode::EmitCode() {
     std::cout << "Emitting code for MainDefNode\n";
-    fprintf(FDOUT, "\n\t### *** MAIN DEFINITION *** ###\n");
-    fprintf(FDOUT, "_main:\n");
+    begin_func("main");
     stmt_list->EmitCode();
-    fprintf(FDOUT, "\n\t### *** END OF MAIN *** ###\n");
-    fprintf(FDOUT, "\tli $v0, 10\t#load value for exit\n");
-    fprintf(FDOUT, "\tsyscall   \t#exit the program\n");
+    end_func("main");
 }
+
+
+void begin_func(std::string name) {
+    write("\n\t###########################");
+    write("\t### \t %s \t ###", name.c_str());
+    write("\t###########################");
+    write("__%s:", name.c_str());
+    PUSH("$ra");
+}
+
+void end_func(std::string name) {
+    write("\t### END OF FUNCTION \"%s\" ###", name.c_str());
+    POP("$ra");
+    write("\tjr $ra");
+}
+
 
 FuncDefNode::FuncDefNode(ASTNode* id, ASTNode* params, ASTNode* type, ASTNode* decl_list, ASTNode* stmts, ErrorData err) 
 : ASTNode(err)
@@ -594,6 +626,7 @@ void AssignmentStatementNode::setLocalST(SymbolTable* ST) {
 }
 
 void AssignmentStatementNode::EmitCode() {
+    // TODO: MIPS code to change value at identifier's offset from the frame pointer
     std::cout << "Emitting code for AssignmentStatementNode\n";
 }
 
@@ -654,7 +687,7 @@ void ActualArgsNode::EmitCode() {
     // so we must put them on in reverse order
     for(auto arg = actual_args->rbegin(); arg != actual_args->rend(); ++arg) {
         (*arg)->EmitCode();
-        fprintf(FDOUT, PUSH, "$t0");
+        PUSH("$t0");
     }
 }
 
@@ -887,17 +920,17 @@ void PrintStatementNode::EmitCode() {
     fprintf(FDOUT, "\n\t### PrintStatement ###\n");
     actual_args->EmitCode();
     for(int i=0; i<actual_args->getSize(); i++) {
-        fprintf(FDOUT, POP, "$a0");
-        fprintf(FDOUT, "\tli $v0, 1     \t# print integer service\n");
-        fprintf(FDOUT, "\tsyscall       \t# print the number\n");
-        fprintf(FDOUT, "\tli $a0, 0x20  \t# load a space\n");
-        fprintf(FDOUT, "\tli $v0, 11    \t# print character service\n");
-        fprintf(FDOUT, "\tsyscall       \t# print the space\n");
+        POP("$a0");
+        write("\tli $v0, 1     \t# print integer service");
+        write("\tsyscall       \t# print the number");
+        write("\tli $a0, 0x20  \t# load a space");
+        write("\tli $v0, 11    \t# print character service");
+        write("\tsyscall       \t# print the space");
     }
     if(newline) {
-        fprintf(FDOUT, "\tli $a0, 0xA  \t# load a newline\n");
-        fprintf(FDOUT, "\tli $v0, 11    \t# print character service\n");
-        fprintf(FDOUT, "\tsyscall       \t# print the newline\n");
+        write("\tli $a0, 0xA  \t# load a newline");
+        write("\tli $v0, 11    \t# print character service");
+        write("\tsyscall       \t# print the newline");
     }
 }
 
@@ -1014,7 +1047,7 @@ std::string IdentifierNode::getLexeme() {
 void IdentifierNode::TypeCheck() {
     IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
     if(info) { // identifier exists in local symbol table
-        if(!info->initialized) {  // identifier is initialized
+        if(!info->IsInitialized()) {  // identifier is initialized
             error(err_data, "Identifier '" + lexeme + "' not initialized");
         }
     }
@@ -1036,7 +1069,7 @@ TypeInfo IdentifierNode::getType() {
 
 void IdentifierNode::initialize() {
     IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
-    if(info) info->initialized = true;
+    if(info) info->Initialize();
 }
 
 void IdentifierNode::setGlobalST(SymbolTable* ST) {

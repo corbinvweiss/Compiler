@@ -18,6 +18,7 @@ int SymbolTable::insert(std::string lexeme, SymbolInfo* info) {
         return 0;
     }
     if(this->symbols.find(lexeme) == this->symbols.end()) {
+        info->SetOffset(4*(size()+1)); // set the stack offset to the next spot on the stack.
         this->symbols[lexeme] = info;
         return 1;
     }
