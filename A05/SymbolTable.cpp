@@ -18,7 +18,8 @@ int SymbolTable::insert(std::string lexeme, SymbolInfo* info) {
         return 0;
     }
     if(this->symbols.find(lexeme) == this->symbols.end()) {
-        info->SetOffset(4*(size()+1)); // set the stack offset to the next spot on the stack.
+        info->SetOffset(4*(size()+1)); // point to where the symbol is stored on the stack relative to $fp
+        // note: this already accounts for $ra being at 0($fp)
         this->symbols[lexeme] = info;
         return 1;
     }
@@ -42,7 +43,6 @@ int SymbolTable::size() {
 
 void SymbolTable::show() {
     for(auto it = this->symbols.begin(); it != this->symbols.end(); ++it){
-        std::cout << it->first << ": " << it->second->show() + ", ";
+        std::cout << it->first << ": " << it->second->show() + "\n";
     }
-    std::cout << "\n";
 }

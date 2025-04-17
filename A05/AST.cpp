@@ -15,13 +15,6 @@ Each function owns its LocalST, and shares both the GlobalST and LocalST with it
 #include "AST.h"
 #include <iostream>
 
-#define PUSH(reg) \
-    fprintf(FDOUT, "\taddi $sp, $sp, -4\t# allocate space on the stack\n\tsw %s, 4($sp)   \t# load %s onto the stack\n", reg, reg)
-
-#define POP(reg) \
-    fprintf(FDOUT, "\tlw %s, 4($sp)   \t# pop the stack\n\taddi $sp, $sp, 4 \t# pop stack into %s\n", reg, reg)
-
-
 static FILE* FDOUT;   // file descriptor of a.s output file
 
 int ERROR_COUNT;
@@ -40,6 +33,20 @@ void write(const char* msg, ...) {
     vfprintf(FDOUT, msg, args);
     va_end(args);
     fprintf(FDOUT, "\n");
+}
+
+void stalloc() {
+    write("\taddi $sp, $sp, -4\t# allocate space on the stack. ");
+}
+
+void push(const char* reg) {
+    stalloc();
+    write("\tsw %s, 4($sp)   \t# load %s onto the stack.", reg, reg);
+}
+
+void pop(const char* reg) {
+    write("\tlw %s, 4($sp)   \t# pop stack into %s", reg, reg);
+    write("\taddi $sp, $sp, 4 \t# restore the stack");
 }
 
 ASTNode::ASTNode(ErrorData err) :err_data(err) {}
@@ -81,6 +88,7 @@ void ProgramNode::EmitCode() {
     write("\t.align 2");
     write("\t.text");
     write("\n\t### BEGIN ###");
+    write("\tmove $fp, $sp\t\t# move the frame pointer to the top of the stack");
     write("\tjal __main\t# jump to the main function");
     write("\n\t### END ###");
     write("\tli $v0, 10\t#load value for exit");
@@ -115,7 +123,9 @@ void MainDefNode::setLocalST(SymbolTable* ST) {
 void MainDefNode::TypeCheck() {
     local_decl_list->TypeCheck();
     stmt_list->TypeCheck();
+    std::cout << "---main---\n";
     LocalST->show();
+    std::cout << "----------\n";
 }
 
 void MainDefNode::EmitCode() {
@@ -131,12 +141,12 @@ void begin_func(std::string name) {
     write("\t### \t %s \t ###", name.c_str());
     write("\t###########################");
     write("__%s:", name.c_str());
-    PUSH("$ra");
+    push("$ra");
 }
 
 void end_func(std::string name) {
     write("\t### END OF FUNCTION \"%s\" ###", name.c_str());
-    POP("$ra");
+    pop("$ra");
     write("\tjr $ra");
 }
 
@@ -421,6 +431,7 @@ void VarDeclNode::setLocalST(SymbolTable* ST) {
 
 void VarDeclNode::EmitCode() {
     std::cout << "Emitting code for VarDeclNode\n";
+    stalloc();  // allocate space on the stack for a variable
 }
 
 ArrayDeclNode::ArrayDeclNode(ASTNode* id, ASTNode* tp, ASTNode* len, ErrorData err)
@@ -628,6 +639,13 @@ void AssignmentStatementNode::setLocalST(SymbolTable* ST) {
 void AssignmentStatementNode::EmitCode() {
     // TODO: MIPS code to change value at identifier's offset from the frame pointer
     std::cout << "Emitting code for AssignmentStatementNode\n";
+    expression->EmitCode(); // expression does its thing and stores its result at 4($sp)
+    pop("$t0");             // fetch the expression's result into $t0
+    std::string lexeme = identifier->getLexeme();
+    SymbolInfo* info = LocalST->lookup(lexeme);
+    assert(info);
+    int offset = info->GetOffset();
+    write("\tsw $t0, %d($fp)\t\t# write to '%s'", offset, lexeme.c_str());
 }
 
 ActualArgsNode::ActualArgsNode(ErrorData err) 
@@ -682,13 +700,13 @@ std::vector<TypeInfo> ActualArgsNode::argTypes() {
 
 void ActualArgsNode::EmitCode() {
     std::cout << "Emitting code for ActualArgsNode\n";
-    fprintf(FDOUT, "\t### Actual Args ###\n");
+    write("\t### Actual Args ###");
     // The arguments will be pulled off the stack in reverse order,
     // so we must put them on in reverse order
     for(auto arg = actual_args->rbegin(); arg != actual_args->rend(); ++arg) {
         (*arg)->EmitCode();
-        PUSH("$t0");
     }
+    write("\t### END Actual Args");
 }
 
 CallNode::CallNode(ASTNode* id, ASTNode* act_args, ErrorData err) 
@@ -781,6 +799,10 @@ TypeInfo ArrayAccessNode::getType() {
     if(tinfo.type == Type::array_bool) return Type::Bool;
     if(tinfo.type == Type::array_i32) return Type::i32;
     else return Type::none;
+}
+
+std::string ArrayAccessNode::getLexeme() {
+    return identifier->getLexeme();
 }
 
 void ArrayAccessNode::TypeCheck() {
@@ -917,10 +939,10 @@ void PrintStatementNode::TypeCheck() {
 void PrintStatementNode::EmitCode() {
     // get the arguments from the ActualArgsNode
     std::cout << "Emitting code for PrintStatementNode\n";
-    fprintf(FDOUT, "\n\t### PrintStatement ###\n");
+    write("\n\t### PrintStatement ###");
     actual_args->EmitCode();
     for(int i=0; i<actual_args->getSize(); i++) {
-        POP("$a0");
+        pop("$a0");
         write("\tli $v0, 1     \t# print integer service");
         write("\tsyscall       \t# print the number");
         write("\tli $a0, 0x20  \t# load a space");
@@ -1082,6 +1104,11 @@ void IdentifierNode::setLocalST(SymbolTable* ST) {
 
 void IdentifierNode::EmitCode() {
     std::cout << "Emitting code for IdentifierNode\n";
+    SymbolInfo* info = LocalST->lookup(lexeme);
+    assert(info);
+    int offset = info->GetOffset();
+    write("\tlw $t0, %d($fp)\t\t# get the value of '%s'", offset, lexeme.c_str());
+    push("$t0");
 }
 
 TypeNode::TypeNode(TypeInfo t, ErrorData err) 
@@ -1108,7 +1135,8 @@ int NumberNode::getValue() {
 
 void NumberNode::EmitCode() {
     std::cout << "Emitting code for NumberNode\n";
-    fprintf(FDOUT, "\tli, $t0, %d\t\t\t# load the value of the number\n", value);
+    write("\tli, $t0, %d\t\t\t# load the value of the number", value);
+    push("$t0");
 }
 
 BoolNode::BoolNode(bool val, ErrorData err)

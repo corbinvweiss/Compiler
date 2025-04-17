@@ -124,6 +124,7 @@ class LValueNode: public ASTNode {
     public:
         virtual void initialize() = 0; // initialize the identifier or array
         LValueNode(ErrorData err): ASTNode(err) {}
+        virtual std::string getLexeme() = 0;
         void EmitCode() override = 0; // Emit code for an l-value
 };
 
@@ -133,7 +134,7 @@ class IdentifierNode: public LValueNode {
     public:
         IdentifierNode(std::string id, ErrorData err);
         ~IdentifierNode();
-        std::string getLexeme();
+        std::string getLexeme() override;
         TypeInfo getType() override;
         void TypeCheck() override;
         void setGlobalST(SymbolTable* ST) override;
@@ -153,6 +154,7 @@ class ArrayAccessNode: public LValueNode {
         void setLocalST(SymbolTable* ST) override;
         TypeInfo getType() override;
         void TypeCheck() override;
+        std::string getLexeme() override;
         void initialize() override;
         void EmitCode() override; // Emit code for array access
 };

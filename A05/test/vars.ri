@@ -1,5 +1,7 @@
 fn main() {
     let mut a: i32;
+    let mut x: i32;
     a = 5;
-    print(a);
+    x = 42;
+    print(a, x);
 }
