@@ -938,13 +938,28 @@ void PrintStatementNode::TypeCheck() {
 
 void PrintStatementNode::EmitCode() {
     // get the arguments from the ActualArgsNode
+    // TODO: true and false printing
     std::cout << "Emitting code for PrintStatementNode\n";
     write("\n\t### PrintStatement ###");
-    actual_args->EmitCode();
-    for(int i=0; i<actual_args->getSize(); i++) {
-        pop("$a0");
-        write("\tli $v0, 1     \t# print integer service");
-        write("\tsyscall       \t# print the number");
+    for(ASTNode* arg : *(actual_args->getArgs())) {
+        // TODO: check the type of the actual arg. 
+        // if it is a boolean, do branching.
+        // if it is a number, continue as usual.
+        arg->EmitCode();
+        if(arg->getType().type == Type::Bool) {
+            pop("$t0");     // get the result of the expression off of the stack
+            write("\tla $a0, false   \t# load the 'false' message");
+            write("\tbeqz $t0, _printfalse   \t# don't load the 'true' message");
+            write("\tla $a0, true   \t# load the 'true' message");
+            write("_printfalse: ");
+            write("\tli $v0, 4      \t# print string service");
+            write("\tsyscall        \t# print the string");
+        }
+        else if(arg->getType().type == Type::i32) {
+            pop("$a0");
+            write("\tli $v0, 1     \t# print integer service");
+            write("\tsyscall       \t# print the number");
+        }
         write("\tli $a0, 0x20  \t# load a space");
         write("\tli $v0, 11    \t# print character service");
         write("\tsyscall       \t# print the space");
@@ -1152,4 +1167,11 @@ bool BoolNode::getValue() {
 
 void BoolNode::EmitCode() {
     std::cout << "Emitting code for BoolNode\n";
+    if(value) {
+        write("\tli, $t0, 1\t\t\t# loading 'true'");
+    }
+    else {
+        write("\tli, $t0, 0\t\t\t# loading 'false'");
+    }
+    push("$t0");
 }
