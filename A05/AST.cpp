@@ -135,7 +135,10 @@ void ProgramNode::EmitCode(LabelTracker& LT) {
     write("\ttrue: .asciiz \"true\"\t# define the true string");
     write("\tfalse: .asciiz \"false\"\t# define the false string");
     write("\tdiv0: .asciiz \"runtime error: cannot divide by zero.\"");
-    fprintf(FDOUT, MALLOC);
+    write("\toutofbounds: .asciiz \"runtime error: index out of bounds.\"");
+    fprintf(FDOUT, "%s", MALLOC_HEADER);
+    write("\t.align 2");
+    write("\t.text");
     write("\n\t### BEGIN ###");
     write("\tmove $fp, $sp\t\t# move the frame pointer to the top of the stack");
     write("\tjal __main\t# jump to the main function");
@@ -152,8 +155,17 @@ void ProgramNode::EmitCode(LabelTracker& LT) {
     write("\tsyscall");
     write("\tj __exit       \t\t# exit the program");
 
+    write("\n__error_outofbounds:\t\t# runtime error for out of bounds array access");
+    write("\tla $a0, outofbounds\t\t# load the error string");
+    write("\tli $v0, 4    \t\t# load the print string service");
+    write("\tsyscall");
+    write("\tj __exit       \t\t# exit the program");
+
     func_def_list->EmitCode(LT);
     main_def->EmitCode(LT);
+
+    fprintf(FDOUT, "%s", MALLOC_BODY);
+
 }
 
 MainDefNode::MainDefNode(ASTNode* decl_list, ASTNode* stmts, ErrorData err) 
@@ -570,7 +582,21 @@ void ArrayDeclNode::TypeCheck() {
 
 void ArrayDeclNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for ArrayDeclNode\n";
-    // TODO: allocate space on the heap for the array.
+    // I need four bytes for each element of the array plus 
+    // four bytes for the size of the array 
+    // The pointer to the array is returned in $v0
+    // The number of bytes allocated is returned in $v1
+    write("\taddi $sp, $sp, -4\t# allocate space on the stack for '%s'", identifier->getLexeme().c_str());
+    int size = 4*(getType().size + 1);
+    write("\tli, $a0, %d\t\t# request %d bytes from malloc", size, size);
+    write("\tjal malloc");
+    // TODO: add a runtime error for space not allocated.
+    write("\tsw $v0, 4($sp)\t\t# store a pointer to the array on the stack");
+    write("li $t0, %d", getType().size);
+    write("\tsw $t0, ($v0)\t# put the number of elements in the start of the array");
+    // now I store the pointer to the first element of the array in the stack
+    // at the offset associated with this identifier in the local symbol table
+    // allocate space in the stack for the array
 }
 
 ArrayLiteralNode::ArrayLiteralNode(ASTNode* expression, ErrorData err)
@@ -732,15 +758,9 @@ void AssignmentStatementNode::setLocalST(SymbolTable* ST) {
 }
 
 void AssignmentStatementNode::EmitCode(LabelTracker& LT) {
-    // TODO: MIPS code to change value at identifier's offset from the frame pointer
     std::cout << "Emitting code for AssignmentStatementNode\n";
     expression->EmitCode(LT); // expression does its thing and stores its result at 4($sp)
-    pop("$t0");             // fetch the expression's result into $t0
-    std::string lexeme = identifier->getLexeme();
-    SymbolInfo* info = LocalST->lookup(lexeme);
-    assert(info);
-    int offset = info->GetOffset();
-    write("\tsw $t0, %d($fp)\t\t# write to '%s'", offset, lexeme.c_str());
+    identifier->EmitSetCode(LT);
 }
 
 ActualArgsNode::ActualArgsNode(ErrorData err) 
@@ -920,8 +940,35 @@ void ArrayAccessNode::initialize() {
     identifier->initialize();
 }
 
+void ArrayAccessNode::Access(LabelTracker& LT) {
+    write("\t### Array Access ###");
+    expression->EmitCode(LT);
+    pop("$s0"); // array index
+    int offset = LocalST->lookup(identifier->getLexeme())->GetOffset();
+    write("\tlw $t0, %d($fp)\t\t# $t0 = address of the array", offset);
+    write("\tlw $t1, ($t0)\t\t# get the length of the array");
+    // check for out of bounds access
+    write("\tbge $s0, $t1, __error_outofbounds\t# out of bounds array access");
+    write("\tblt $s0, $zero, __error_outofbounds\t# negative array index error");
+    // todo: check for negative indices
+
+    write("\taddi $t2, $s0, 1\t\t# add 1 to the index for the irrelavent first element");
+    write("\tsll $t2, $t2, 2\t\t# multiply $t2 by 4 to get byte size");
+    write("\tadd $t2, $t2, $t0\t\t# add the offset ($t2) to the beginning of the array ($t0)");
+}
+
 void ArrayAccessNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for ArrayAccessNode\n";
+    // access an element of an array
+    Access(LT);
+    write("\tlw $s1, ($t2)\t\t# get the element at given index");
+    push("$s1");
+}
+
+void ArrayAccessNode::EmitSetCode(LabelTracker& LT) {
+    Access(LT);
+    pop("$t0");
+    write("\tsw $t0, ($t2)\t\t# set the element at given index");
 }
 
 IfStatementNode::IfStatementNode(ASTNode* expr, ASTNode* if_, ASTNode* else_, ErrorData err) 
@@ -1292,6 +1339,14 @@ void IdentifierNode::EmitCode(LabelTracker& LT) {
     int offset = info->GetOffset();
     write("\tlw $t0, %d($fp)\t\t# get the value of '%s'", offset, lexeme.c_str());
     push("$t0");
+}
+
+void IdentifierNode::EmitSetCode(LabelTracker& LT) {
+    SymbolInfo* info = LocalST->lookup(lexeme);
+    assert(info);
+    int offset = info->GetOffset();
+    pop("$t0");
+    write("\tsw $t0, %d($fp)\t\t# set the value of '%s'", offset, lexeme.c_str());
 }
 
 TypeNode::TypeNode(TypeInfo t, ErrorData err) 

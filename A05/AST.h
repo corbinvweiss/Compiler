@@ -145,6 +145,7 @@ class LValueNode: public ASTNode {
         LValueNode(ErrorData err): ASTNode(err) {}
         virtual std::string getLexeme() = 0;
         void EmitCode(LabelTracker&) override = 0; // Emit code for an l-value
+        virtual void EmitSetCode(LabelTracker&) = 0;
 };
 
 class IdentifierNode: public LValueNode {
@@ -160,6 +161,7 @@ class IdentifierNode: public LValueNode {
         void setLocalST(SymbolTable* ST) override;
         void initialize() override;
         void EmitCode(LabelTracker&) override; // Emit code for an identifier
+        void EmitSetCode(LabelTracker&) override;   // Emit code for set identifier value
 };
 
 class ArrayAccessNode: public LValueNode {
@@ -175,7 +177,9 @@ class ArrayAccessNode: public LValueNode {
         void TypeCheck() override;
         std::string getLexeme() override;
         void initialize() override;
-        void EmitCode(LabelTracker&) override; // Emit code for array access
+        void EmitCode(LabelTracker&) override; // Emit code for get array access
+        void EmitSetCode(LabelTracker&) override;   // Emit code for set array access
+        void Access(LabelTracker&);
 };
 
 class VarDeclNode: public ASTNode {

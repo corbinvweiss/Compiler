@@ -1,11 +1,13 @@
-const char* MALLOC = R"(
+const char* MALLOC_HEADER = R"(
 
-ferror:	.asciiz "Memory already free!\n"
-uerror:	.asciiz "Trying to free memory not malloced!\n"
-mused:  .word 0         # starting points for malloc
-mfree:  .word 0         # one ptr to memory list,
-	                # one to the free list
-        .text
+	ferror:	.asciiz "Memory already free!\n"
+	uerror:	.asciiz "Trying to free memory not malloced!\n"
+	mused:  .word 0         # starting points for malloc
+	mfree:  .word 0         # one ptr to memory list,
+		                # one to the free list
+)";
+
+const char* MALLOC_BODY = R"(
 	
 ####################################################
 # malloc()
