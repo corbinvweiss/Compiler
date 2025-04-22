@@ -17,6 +17,8 @@ Each function owns its LocalST, and shares both the GlobalST and LocalST with it
 
 static FILE* FDOUT;   // file descriptor of a.s output file
 
+static int LABELCOUNT;
+
 int ERROR_COUNT;
 void error(ErrorData err, std::string msg)
 {
@@ -33,6 +35,11 @@ void write(const char* msg, ...) {
     vfprintf(FDOUT, msg, args);
     va_end(args);
     fprintf(FDOUT, "\n");
+}
+
+void label(const char* l) {
+    write("%s%d:", l, LABELCOUNT);
+    LABELCOUNT++;
 }
 
 void stalloc() {
@@ -85,14 +92,25 @@ void ProgramNode::EmitCode() {
     write("\t.data");
     write("\ttrue: .asciiz \"true\"\t# define the true string");
     write("\tfalse: .asciiz \"false\"\t# define the false string");
+    write("\tdiv0: .asciiz \"runtime error: cannot divide by zero.\"");
     write("\t.align 2");
     write("\t.text");
     write("\n\t### BEGIN ###");
     write("\tmove $fp, $sp\t\t# move the frame pointer to the top of the stack");
     write("\tjal __main\t# jump to the main function");
     write("\n\t### END ###");
+    write("__exit:");
     write("\tli $v0, 10\t#load value for exit");
     write("\tsyscall   \t#exit the program");
+
+    // *** runtime exception code ***
+    write("\n\t### runtime errors ###");
+    write("__error_div0:\t\t# runtime error for division by zero");
+    write("\tla $a0, div0\t\t# load the runtime error string");
+    write("\tli $v0, 4    \t\t# load the print string service");
+    write("\tsyscall");
+    write("\tj __exit       \t\t# exit the program");
+
 
     main_def->EmitCode();
 }
@@ -949,9 +967,9 @@ void PrintStatementNode::EmitCode() {
         if(arg->getType().type == Type::Bool) {
             pop("$t0");     // get the result of the expression off of the stack
             write("\tla $a0, false   \t# load the 'false' message");
-            write("\tbeqz $t0, _printfalse   \t# don't load the 'true' message");
+            write("\tbeqz $t0, _printfalse%d   \t# don't load the 'true' message", LABELCOUNT);
             write("\tla $a0, true   \t# load the 'true' message");
-            write("_printfalse: ");
+            label("_printfalse");
             write("\tli $v0, 4      \t# print string service");
             write("\tsyscall        \t# print the string");
         }
@@ -969,6 +987,7 @@ void PrintStatementNode::EmitCode() {
         write("\tli $v0, 11    \t# print character service");
         write("\tsyscall       \t# print the newline");
     }
+    write("\t### End of printstatement ###");
 }
 
 
@@ -1005,6 +1024,14 @@ void UnaryNode::TypeCheck() {
 
 void UnaryNode::EmitCode() {
     std::cout << "Emitting code for UnaryNode\n";
+    right->EmitCode();
+    pop("$t0");
+    if(op == "!") {
+        write("\tnot $t2, $t0\t\t# not $t0");
+    } else if(op == "-") {
+        write("\tneg $t2, $t0\t\t# negate $t0");
+    }
+    push("$t2");
 }
 
 
@@ -1069,6 +1096,43 @@ void BinaryNode::TypeCheck() {
 
 void BinaryNode::EmitCode() {
     std::cout << "Emitting code for BinaryNode\n";
+    // left side goes in $s0, right side goes in $s1
+    write("\t### Binary Node ###");
+    left->EmitCode();
+    right->EmitCode();
+    pop("$s1"); // right operand
+    pop("$s0"); // left operand
+    if(op == "+") {
+        write("\tadd $s2, $s0, $s1\t# add the left and right sides");
+    } else if(op == "-") {
+        write("\tsub $s2, $s0, $s1\t# subtract the left and right sides");
+    } else if(op == "*") {
+        write("\tmul $s2, $s0, $s1\t# multiply the left and right sides");
+    } else if(op == "/") {
+        write("\tbeqz $s1, __error_div0\t# jump to the division by zero runtime error");
+        write("\tdiv $s2, $s0, $s1\t# divide the left and right sides");
+    } else if(op == "%") {
+        write("\tbeqz $s1, __error_div0\t# jump to the division by zero runtime error");
+        write("\trem $s2, $s0, $s1\t# get the remainder from dividing $t0 by $t1");
+    } else if(op == "&&") {
+        write("\tand $s2, $s0, $s1\t# and left and right side");
+    } else if(op == "||") {
+        write("\tor  $s2, $t0, $t1\t# or left and right side");
+    } else if(op == "==") {
+        write("\tseq  $s2, $s0, $s1\t# equal");
+    } else if(op == "!=") {
+        write("\tsne  $s2, $s0, $s1\t # not equal");
+    } else if(op == "<=") {
+        write("\tsle  $s2, $s0, $s1\t # less than or equal");
+    } else if(op == ">=") {
+        write("\tsge  $s2, $s0, $s1\t # greater or equal");
+    } else if(op == "<") {
+        write("\tslt  $s2, $s0, $s1\t # less than");
+    } else if(op == ">") {
+        write("\tsgt  $s2, $s0, $s1\t # greater than");
+    }
+    push("$s2");    // push the result onto the stack again.
+    write("\t### end of Binary Node ###");
 }
 
 

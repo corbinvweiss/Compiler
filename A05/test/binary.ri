@@ -1,0 +1,7 @@
+fn main() {
+    let mut a: i32;
+    a = 1;
+    a = (4 + 0/2)/2;
+    println(a);
+    print(1/0);
+}
