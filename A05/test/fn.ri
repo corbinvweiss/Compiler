@@ -1,0 +1,14 @@
+fn f(x: i32, y: i32, condition: bool) -> i32 {
+    if condition {
+        return x * y;
+    }
+    else {
+        return x + y;
+    }
+}
+
+fn main() {
+    let mut x: i32;
+    x = 5;
+    print(f(x, x, false));
+}

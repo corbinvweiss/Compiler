@@ -18,8 +18,7 @@ int SymbolTable::insert(std::string lexeme, SymbolInfo* info) {
         return 0;
     }
     if(this->symbols.find(lexeme) == this->symbols.end()) {
-        info->SetOffset(4*(size()+1)); // point to where the symbol is stored on the stack relative to $fp
-        // note: this already accounts for $ra being at 0($fp)
+        info->SetOffset(-4*(size())); // point to where the symbol is stored on the stack relative to $fp
         this->symbols[lexeme] = info;
         return 1;
     }

@@ -152,7 +152,7 @@ void ProgramNode::EmitCode(LabelTracker& LT) {
     write("\tsyscall");
     write("\tj __exit       \t\t# exit the program");
 
-
+    func_def_list->EmitCode(LT);
     main_def->EmitCode(LT);
 }
 
@@ -190,6 +190,7 @@ void MainDefNode::TypeCheck() {
 void MainDefNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for MainDefNode\n";
     begin_func("main");
+    local_decl_list->EmitCode(LT);
     stmt_list->EmitCode(LT);
     end_func("main");
 }
@@ -200,12 +201,18 @@ void begin_func(std::string name) {
     write("\t### \t %s \t ###", name.c_str());
     write("\t###########################");
     write("__%s:", name.c_str());
-    push("$ra");
+    write("\taddi $sp, $sp, -8\t\t# make space for $fp and $ra on stack");
+    write("\tsw $ra, 4($sp)\t\t# store the return address");
+    write("\tsw $fp, 8($sp)\t\t# store the old frame pointer");
+    write("\tmove $fp, $sp\t\t# move the frame pointer to the top of the stack");
 }
 
 void end_func(std::string name) {
     write("\t### END OF FUNCTION \"%s\" ###", name.c_str());
-    pop("$ra");
+    write("\tmove $sp, $fp\t\t# clear the stack of local variables");
+    write("\tlw $ra, 4($fp)\t\t# fetch the $ra from the stack");
+    write("\tlw $fp, 8($fp)\t\t# reset the $fp to the caller state");
+    write("\taddi $sp, $sp, 8\t\t# reset the stack");
     write("\tjr $ra");
 }
 
@@ -257,6 +264,9 @@ void FuncDefNode::TypeCheck() {
     }
     params_list->TypeCheck();   // put parameters in local ST
     local_decl_list->TypeCheck();
+    std::cout << "--- " << lexeme << " ---\n";
+    LocalST->show();
+    std::cout << "----------\n";
     stmt_list->TypeCheck();
     CheckReturn();
 }
@@ -283,6 +293,21 @@ void FuncDefNode::CheckReturn() {
 
 void FuncDefNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for FuncDefNode\n";
+    std::string lexeme = identifier->getLexeme();
+    begin_func(lexeme);
+    params_list->EmitCode(LT);
+    // TODO: initialize values of parameters from the stack
+    // based on the size of params_list
+    int n = params_list->getSize();
+    for( int i=0; i < n; i++ ) {
+        // stack offset from frame pointer is number of parameters plus 2 for $fp and $ra 
+        int fp_offset = n + 2;    
+        write("\tlw $t0, %d($fp)\t\t# load the value of the argument", 4 * (fp_offset - i));
+        write("\tsw $t0, %d($fp)\t\t# write the value to the local variable", -4 * i);
+    }
+    local_decl_list->EmitCode(LT);
+    stmt_list->EmitCode(LT);
+    end_func(lexeme);
 }
 
 ReturnNode::ReturnNode(ASTNode* expr, ErrorData err)
@@ -323,6 +348,8 @@ ASTNode* ReturnNode::FindReturn() {
 
 void ReturnNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for ReturnNode\n";
+    expression->EmitCode(LT);   // evaluate the expression
+    pop("$v0");                 // put the return value in $v0
 }
 
 ParamsListNode::ParamsListNode(ASTNode* param, ErrorData err)
@@ -369,6 +396,10 @@ void ParamsListNode::TypeCheck() {
 
 void ParamsListNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for ParamsListNode\n";
+    // TODO: initialize this like a local_var_decl_list
+    for(VarDeclNode* param : *parameters) {
+        param->EmitCode(LT);  // allocate space for the parameters
+    }
 }
 
 FuncDefListNode::FuncDefListNode(ErrorData err) 
@@ -401,6 +432,9 @@ void FuncDefListNode::setGlobalST(SymbolTable* ST) {
 }
 
 void FuncDefListNode::EmitCode(LabelTracker& LT) {
+    for(FuncDefNode* func_def : *func_def_list) {
+        func_def->EmitCode(LT);
+    }
     std::cout << "Emitting code for FuncDefListNode\n";
 }
 
@@ -490,7 +524,7 @@ void VarDeclNode::setLocalST(SymbolTable* ST) {
 
 void VarDeclNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for VarDeclNode\n";
-    stalloc();  // allocate space on the stack for a variable
+    write("\taddi $sp, $sp, -4\t# allocating space for '%s'", identifier->getLexeme().c_str());
 }
 
 ArrayDeclNode::ArrayDeclNode(ASTNode* id, ASTNode* tp, ASTNode* len, ErrorData err)
@@ -762,10 +796,10 @@ void ActualArgsNode::EmitCode(LabelTracker& LT) {
     write("\t### Actual Args ###");
     // The arguments will be pulled off the stack in reverse order,
     // so we must put them on in reverse order
-    for(auto arg = actual_args->rbegin(); arg != actual_args->rend(); ++arg) {
-        (*arg)->EmitCode(LT);
+    for(ASTNode* arg: *actual_args) {
+        arg->EmitCode(LT);
     }
-    write("\t### END Actual Args");
+    write("\t### End of Actual Args");
 }
 
 CallNode::CallNode(ASTNode* id, ASTNode* act_args, ErrorData err) 
@@ -823,6 +857,14 @@ void CallNode::TypeCheck() {
 
 void CallNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for CallNode\n";
+    write("\t### Call ###");
+    std::string lexeme = identifier->getLexeme();
+    actual_args->EmitCode(LT);
+    write("\tjal __%s\t\t# go to the function", lexeme.c_str());
+    // if the function returns something I want to put that on the stack
+    // but if not then I need to leave the stack like it is...
+    push("$v0");
+    write("\t### End of Call ###");
 }
 
 ArrayAccessNode::ArrayAccessNode(ASTNode* id, ASTNode* expr, ErrorData err) 
@@ -1017,14 +1059,9 @@ void PrintStatementNode::TypeCheck() {
 }
 
 void PrintStatementNode::EmitCode(LabelTracker& LT) {
-    // get the arguments from the ActualArgsNode
-    // TODO: true and false printing
     std::cout << "Emitting code for PrintStatementNode\n";
     write("\n\t### PrintStatement ###");
     for(ASTNode* arg : *(actual_args->getArgs())) {
-        // TODO: check the type of the actual arg. 
-        // if it is a boolean, do branching.
-        // if it is a number, continue as usual.
         arg->EmitCode(LT);
         if(arg->getType().type == Type::Bool) {
             pop("$t0");     // get the result of the expression off of the stack

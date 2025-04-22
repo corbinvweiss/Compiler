@@ -269,6 +269,7 @@ class ParamsListNode: public ASTNode {
         void append(ASTNode* parameter);
         std::vector<TypeInfo> getTypes();   // return the types of the parameters
         void setLocalST(SymbolTable* ST) override;
+        int getSize() { return parameters->size(); }
         // note: the parameters of a function do not need a global symbol table
         void TypeCheck() override;      // populate the parameters into the local symbol table
         void EmitCode(LabelTracker&) override; // Emit code for parameters list

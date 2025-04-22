@@ -11,52 +11,46 @@ Look [here](https://www.cs.southern.edu/halterman/Courses/Winter2025/415/Assignm
 make TypeCheck() return a boolean value so that it stops the process when it encounters a fatal error, and does not try to generate MIPS code for a program that won't work.
 
 ## Questions:
-How do I handle labels for nested if statements?
+What do I do with functions that call each other? I need to save the frame pointer for each one.
+At the beginning of each function:
+1. Save the frame pointer from the outside function
+2. Save the return address to the outside function
+3. frame pointer = stack pointer
+4. ... function stuff ...
+5. restore frame pointer
+6. restore return address
 
 ```
-if {
-    if {
-
-    }
-    else {
-
-    }
+fn f(x: i32) -> i32 {
+    return x * x;
 }
-else {
 
+fn main() {
+    let mut x: i32;
+    x = 5;
+    print(f(x));
 }
 ```
-should produce something like:
+stack:
 ```
-    beqz $s0, _else0
-    ...
-    beqz $s0, _else1
-    ...
-    j _endif1
-_else1
-    ...
-_endif1
-    j _endif0
-_else0
-    ...
-_endif0
-    ...
+main:
+- $fp
+- $ra
+- x
+- 5
+f:
+- $fp       (main's frame pointer)
+- $ra
+- x         <- f's frame pointer
+
 ```
 
-This means that I need a label tracker instance that is shared between each call to if statement node
+Start of each function call:
+1. push $fp, $ra
+2. set $fp = $sp
 
-### While label
-```
-_beginwhile0:
-    ... condition ...
-    beqz $s0, _endwhile0
-    ... body ...
-_beginwhile1:
-    ... condition ...
-    beqz $s0, _endwhile1
-    ... body ...
-    j beginwhile1;
-_endwhile1
-    j beginwhile0;
-_endwhile0
-```
+End of each function call:
+1. move $sp, $fp    # clear the stack of local variables
+1. lw $ra, 4($fp)
+2. lw $fp, 8($fp)
+3. addi $sp, $sp, 8 # clear the stack
