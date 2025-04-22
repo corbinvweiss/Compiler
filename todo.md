@@ -44,3 +44,19 @@ _endif0
 ```
 
 This means that I need a label tracker instance that is shared between each call to if statement node
+
+### While label
+```
+_beginwhile0:
+    ... condition ...
+    beqz $s0, _endwhile0
+    ... body ...
+_beginwhile1:
+    ... condition ...
+    beqz $s0, _endwhile1
+    ... body ...
+    j beginwhile1;
+_endwhile1
+    j beginwhile0;
+_endwhile0
+```

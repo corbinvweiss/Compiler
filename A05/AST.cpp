@@ -76,6 +76,26 @@ void LabelTracker::EndIfLabel() {
     if_stack.pop();
 }
 
+void LabelTracker::BeginWhileLabel() {
+    write("_beginwhile%d:\t\t# begin of while loop", while_count);
+    while_stack.push(while_count);
+    while_count++;
+}
+
+void LabelTracker::BranchWhile(const char* reg) {
+    write("\tbeqz %s, _endwhile%d\t\t# go to end of while", reg, while_stack.top());
+}
+
+void LabelTracker::JumpBeginWhile() {
+    write("\tj _beginwhile%d\t\t# jump to begin of while", while_stack.top());
+}
+
+void LabelTracker::EndWhileLabel() {
+    write("_endwhile%d:\t\t# end of while loop", while_stack.top());
+    while_stack.pop();
+}
+
+
 ASTNode::ASTNode(ErrorData err) :err_data(err) {}
 
 ProgramNode::ProgramNode(ASTNode* func_list, ASTNode* main, FILE* fdout) 
@@ -953,6 +973,15 @@ void WhileStatementNode::TypeCheck() {
 
 void WhileStatementNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for WhileStatementNode\n";
+    write("\t### While Statement ###");
+    LT.BeginWhileLabel();
+    expression->EmitCode(LT);
+    pop("$s0"); 
+    LT.BranchWhile("$s0");  // check the condition
+    body->EmitCode(LT);
+    LT.JumpBeginWhile();
+    LT.EndWhileLabel();
+    write("### End While Statement ###");
 }
 
 PrintStatementNode::PrintStatementNode(ASTNode* args, bool ln, ErrorData err)
@@ -1015,6 +1044,9 @@ void PrintStatementNode::EmitCode(LabelTracker& LT) {
         write("\tli $v0, 11    \t# print character service");
         write("\tsyscall       \t# print the space");
     }
+    write("\tli $a0, 0x20  \t# load a space");
+    write("\tli $v0, 11    \t# print character service");
+    write("\tsyscall       \t# print the space");
     if(newline) {
         write("\tli $a0, 0xA  \t# load a newline");
         write("\tli $v0, 11    \t# print character service");

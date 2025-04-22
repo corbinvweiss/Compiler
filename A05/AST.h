@@ -68,7 +68,9 @@ struct LabelTracker {
     void JumpEndIf();
     void EndIfLabel();
     void ElseLabel();
-    void WhileLabel();
+    void BeginWhileLabel();
+    void BranchWhile(const char* reg);
+    void JumpBeginWhile();
     void EndWhileLabel();
 };
 

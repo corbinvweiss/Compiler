@@ -1,0 +1,14 @@
+fn main() {
+    let mut a: i32;
+    let mut i: i32;
+    a = 0;
+    while a < 100 {
+        i = 0;
+        while i < a {
+            print();
+            i = i + 1;
+        }
+        println(a);
+        a = a + 1;
+    }
+}
