@@ -13,6 +13,7 @@ Each function owns its LocalST, and shares both the GlobalST and LocalST with it
 */
 
 #include "AST.h"
+#include "malloc.h"
 #include <iostream>
 
 static FILE* FDOUT;   // file descriptor of a.s output file
@@ -134,8 +135,7 @@ void ProgramNode::EmitCode(LabelTracker& LT) {
     write("\ttrue: .asciiz \"true\"\t# define the true string");
     write("\tfalse: .asciiz \"false\"\t# define the false string");
     write("\tdiv0: .asciiz \"runtime error: cannot divide by zero.\"");
-    write("\t.align 2");
-    write("\t.text");
+    fprintf(FDOUT, MALLOC);
     write("\n\t### BEGIN ###");
     write("\tmove $fp, $sp\t\t# move the frame pointer to the top of the stack");
     write("\tjal __main\t# jump to the main function");
@@ -525,6 +525,7 @@ void VarDeclNode::setLocalST(SymbolTable* ST) {
 void VarDeclNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for VarDeclNode\n";
     write("\taddi $sp, $sp, -4\t# allocating space for '%s'", identifier->getLexeme().c_str());
+    write("\tlw $zero, 4($sp)\t# initializing '%s' to default of 0", identifier->getLexeme().c_str());
 }
 
 ArrayDeclNode::ArrayDeclNode(ASTNode* id, ASTNode* tp, ASTNode* len, ErrorData err)
@@ -569,6 +570,7 @@ void ArrayDeclNode::TypeCheck() {
 
 void ArrayDeclNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for ArrayDeclNode\n";
+    // TODO: allocate space on the heap for the array.
 }
 
 ArrayLiteralNode::ArrayLiteralNode(ASTNode* expression, ErrorData err)
@@ -1023,7 +1025,7 @@ void WhileStatementNode::EmitCode(LabelTracker& LT) {
     body->EmitCode(LT);
     LT.JumpBeginWhile();
     LT.EndWhileLabel();
-    write("### End While Statement ###");
+    write("\t### End While Statement ###");
 }
 
 PrintStatementNode::PrintStatementNode(ASTNode* args, bool ln, ErrorData err)
