@@ -17,8 +17,6 @@ Each function owns its LocalST, and shares both the GlobalST and LocalST with it
 
 static FILE* FDOUT;   // file descriptor of a.s output file
 
-static int LABELCOUNT;
-
 int ERROR_COUNT;
 void error(ErrorData err, std::string msg)
 {
@@ -37,11 +35,6 @@ void write(const char* msg, ...) {
     fprintf(FDOUT, "\n");
 }
 
-void label(const char* l) {
-    write("%s%d:", l, LABELCOUNT);
-    LABELCOUNT++;
-}
-
 void stalloc() {
     write("\taddi $sp, $sp, -4\t# allocate space on the stack. ");
 }
@@ -56,6 +49,33 @@ void pop(const char* reg) {
     write("\taddi $sp, $sp, 4 \t# restore the stack");
 }
 
+LabelTracker::LabelTracker()
+: if_count(0), if_stack(std::stack<int>()), while_count(0), while_stack(std::stack<int>()), counter(0) {}
+
+void LabelTracker::Label(const char* l)  {
+    write("%s%d:", l, counter);
+    counter++;
+}
+
+void LabelTracker::BranchElse(const char* reg) {
+    write("\tbeqz %s, _else%d\t\t# go to else branch", reg, if_count);
+    if_stack.push(if_count);
+    if_count++;
+}
+
+void LabelTracker::JumpEndIf() {
+    write("\tj _endif%d\t\t# go to if statement", if_stack.top());
+}
+
+void LabelTracker::ElseLabel() {
+    write("_else%d:\t\t# else branch", if_stack.top());
+}
+
+void LabelTracker::EndIfLabel() {
+    write("_endif%d:\t\t# end of if statement", if_stack.top());
+    if_stack.pop();
+}
+
 ASTNode::ASTNode(ErrorData err) :err_data(err) {}
 
 ProgramNode::ProgramNode(ASTNode* func_list, ASTNode* main, FILE* fdout) 
@@ -67,7 +87,8 @@ ProgramNode::ProgramNode(ASTNode* func_list, ASTNode* main, FILE* fdout)
     setGlobalST(new SymbolTable());
     func_def_list->TypeCheck();
     main_def->TypeCheck();
-    EmitCode();
+    LabelTracker LT = LabelTracker();
+    EmitCode(LT);
 }
 
 ProgramNode::~ProgramNode() {
@@ -87,7 +108,7 @@ void ProgramNode::setLocalST(SymbolTable* ST) {
     main_def->setLocalST(ST);
 }
 
-void ProgramNode::EmitCode() {
+void ProgramNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for ProgramNode\n";
     write("\t.data");
     write("\ttrue: .asciiz \"true\"\t# define the true string");
@@ -112,7 +133,7 @@ void ProgramNode::EmitCode() {
     write("\tj __exit       \t\t# exit the program");
 
 
-    main_def->EmitCode();
+    main_def->EmitCode(LT);
 }
 
 MainDefNode::MainDefNode(ASTNode* decl_list, ASTNode* stmts, ErrorData err) 
@@ -146,10 +167,10 @@ void MainDefNode::TypeCheck() {
     std::cout << "----------\n";
 }
 
-void MainDefNode::EmitCode() {
+void MainDefNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for MainDefNode\n";
     begin_func("main");
-    stmt_list->EmitCode();
+    stmt_list->EmitCode(LT);
     end_func("main");
 }
 
@@ -240,7 +261,7 @@ void FuncDefNode::CheckReturn() {
     }
 }
 
-void FuncDefNode::EmitCode() {
+void FuncDefNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for FuncDefNode\n";
 }
 
@@ -280,7 +301,7 @@ ASTNode* ReturnNode::FindReturn() {
     return this;
 }
 
-void ReturnNode::EmitCode() {
+void ReturnNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for ReturnNode\n";
 }
 
@@ -326,7 +347,7 @@ void ParamsListNode::TypeCheck() {
     }
 }
 
-void ParamsListNode::EmitCode() {
+void ParamsListNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for ParamsListNode\n";
 }
 
@@ -359,7 +380,7 @@ void FuncDefListNode::setGlobalST(SymbolTable* ST) {
     }
 }
 
-void FuncDefListNode::EmitCode() {
+void FuncDefListNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for FuncDefListNode\n";
 }
 
@@ -407,10 +428,10 @@ void LocalDeclListNode::setLocalST(SymbolTable* ST) {
     }
 }
 
-void LocalDeclListNode::EmitCode() {
+void LocalDeclListNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for LocalDeclListNode\n";
     for(VarDeclNode* decl : *decl_list) {
-        decl->EmitCode();
+        decl->EmitCode(LT);
     }
 }
 
@@ -447,7 +468,7 @@ void VarDeclNode::setLocalST(SymbolTable* ST) {
     identifier->setLocalST(ST);
 }
 
-void VarDeclNode::EmitCode() {
+void VarDeclNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for VarDeclNode\n";
     stalloc();  // allocate space on the stack for a variable
 }
@@ -492,7 +513,7 @@ void ArrayDeclNode::TypeCheck() {
     }
 }
 
-void ArrayDeclNode::EmitCode() {
+void ArrayDeclNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for ArrayDeclNode\n";
 }
 
@@ -553,7 +574,7 @@ void ArrayLiteralNode::TypeCheck() {
     }
 }
 
-void ArrayLiteralNode::EmitCode() {
+void ArrayLiteralNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for ArrayLiteralNode\n";
 }
 
@@ -609,10 +630,10 @@ std::vector<ASTNode*> StatementListNode::FindReturns() {
     return returns;
 }
 
-void StatementListNode::EmitCode() {
+void StatementListNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for StatementListNode\n";
     for(ASTNode* stmt: *stmt_list) {
-        stmt->EmitCode();
+        stmt->EmitCode(LT);
     }
 }
 
@@ -654,10 +675,10 @@ void AssignmentStatementNode::setLocalST(SymbolTable* ST) {
     expression->setLocalST(ST);
 }
 
-void AssignmentStatementNode::EmitCode() {
+void AssignmentStatementNode::EmitCode(LabelTracker& LT) {
     // TODO: MIPS code to change value at identifier's offset from the frame pointer
     std::cout << "Emitting code for AssignmentStatementNode\n";
-    expression->EmitCode(); // expression does its thing and stores its result at 4($sp)
+    expression->EmitCode(LT); // expression does its thing and stores its result at 4($sp)
     pop("$t0");             // fetch the expression's result into $t0
     std::string lexeme = identifier->getLexeme();
     SymbolInfo* info = LocalST->lookup(lexeme);
@@ -716,13 +737,13 @@ std::vector<TypeInfo> ActualArgsNode::argTypes() {
     return types;
 }
 
-void ActualArgsNode::EmitCode() {
+void ActualArgsNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for ActualArgsNode\n";
     write("\t### Actual Args ###");
     // The arguments will be pulled off the stack in reverse order,
     // so we must put them on in reverse order
     for(auto arg = actual_args->rbegin(); arg != actual_args->rend(); ++arg) {
-        (*arg)->EmitCode();
+        (*arg)->EmitCode(LT);
     }
     write("\t### END Actual Args");
 }
@@ -780,7 +801,7 @@ void CallNode::TypeCheck() {
     }
 }
 
-void CallNode::EmitCode() {
+void CallNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for CallNode\n";
 }
 
@@ -835,7 +856,7 @@ void ArrayAccessNode::initialize() {
     identifier->initialize();
 }
 
-void ArrayAccessNode::EmitCode() {
+void ArrayAccessNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for ArrayAccessNode\n";
 }
 
@@ -882,8 +903,20 @@ void IfStatementNode::TypeCheck() {
     }
 }
 
-void IfStatementNode::EmitCode() {
+void IfStatementNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for IfStatementNode\n";
+    write("\t### If Statement ###");
+    expression->EmitCode(LT);
+    pop("$s0");
+    LT.BranchElse("$s0");
+    if_branch->EmitCode(LT);
+    LT.JumpEndIf();
+    LT.ElseLabel();
+    if(else_branch) {   // there may or may not be an else branch.
+        else_branch->EmitCode(LT);
+    }
+    LT.EndIfLabel();
+    write("\t### end of If Statement ###");
 }
 
 WhileStatementNode::WhileStatementNode(ASTNode* expr, ASTNode* stmts, ErrorData err)
@@ -918,7 +951,7 @@ void WhileStatementNode::TypeCheck() {
     body->TypeCheck();
 }
 
-void WhileStatementNode::EmitCode() {
+void WhileStatementNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for WhileStatementNode\n";
 }
 
@@ -954,7 +987,7 @@ void PrintStatementNode::TypeCheck() {
     }
 }
 
-void PrintStatementNode::EmitCode() {
+void PrintStatementNode::EmitCode(LabelTracker& LT) {
     // get the arguments from the ActualArgsNode
     // TODO: true and false printing
     std::cout << "Emitting code for PrintStatementNode\n";
@@ -963,13 +996,13 @@ void PrintStatementNode::EmitCode() {
         // TODO: check the type of the actual arg. 
         // if it is a boolean, do branching.
         // if it is a number, continue as usual.
-        arg->EmitCode();
+        arg->EmitCode(LT);
         if(arg->getType().type == Type::Bool) {
             pop("$t0");     // get the result of the expression off of the stack
             write("\tla $a0, false   \t# load the 'false' message");
-            write("\tbeqz $t0, _printfalse%d   \t# don't load the 'true' message", LABELCOUNT);
+            write("\tbeqz $t0, _printfalse%d   \t# don't load the 'true' message", LT.counter);
             write("\tla $a0, true   \t# load the 'true' message");
-            label("_printfalse");
+            LT.Label("_printfalse");
             write("\tli $v0, 4      \t# print string service");
             write("\tsyscall        \t# print the string");
         }
@@ -1022,9 +1055,9 @@ void UnaryNode::TypeCheck() {
     }
 }
 
-void UnaryNode::EmitCode() {
+void UnaryNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for UnaryNode\n";
-    right->EmitCode();
+    right->EmitCode(LT);
     pop("$t0");
     if(op == "!") {
         write("\tnot $t2, $t0\t\t# not $t0");
@@ -1094,12 +1127,12 @@ void BinaryNode::TypeCheck() {
 
 }
 
-void BinaryNode::EmitCode() {
+void BinaryNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for BinaryNode\n";
     // left side goes in $s0, right side goes in $s1
     write("\t### Binary Node ###");
-    left->EmitCode();
-    right->EmitCode();
+    left->EmitCode(LT);
+    right->EmitCode(LT);
     pop("$s1"); // right operand
     pop("$s0"); // left operand
     if(op == "+") {
@@ -1181,7 +1214,7 @@ void IdentifierNode::setLocalST(SymbolTable* ST) {
     LocalST = ST;
 }
 
-void IdentifierNode::EmitCode() {
+void IdentifierNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for IdentifierNode\n";
     SymbolInfo* info = LocalST->lookup(lexeme);
     assert(info);
@@ -1197,7 +1230,7 @@ TypeNode::TypeNode(TypeInfo t, ErrorData err)
 }
 TypeNode::~TypeNode() {}
 
-void TypeNode::EmitCode() {
+void TypeNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for TypeNode\n";
 }
 
@@ -1212,7 +1245,7 @@ int NumberNode::getValue() {
     return value;
 }
 
-void NumberNode::EmitCode() {
+void NumberNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for NumberNode\n";
     write("\tli, $t0, %d\t\t\t# load the value of the number", value);
     push("$t0");
@@ -1229,7 +1262,7 @@ bool BoolNode::getValue() {
     return value;
 }
 
-void BoolNode::EmitCode() {
+void BoolNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for BoolNode\n";
     if(value) {
         write("\tli, $t0, 1\t\t\t# loading 'true'");
