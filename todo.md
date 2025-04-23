@@ -10,6 +10,10 @@ Look [here](https://www.cs.southern.edu/halterman/Courses/Winter2025/415/Assignm
 ## Someday
 make TypeCheck() return a boolean value so that it stops the process when it encounters a fatal error, and does not try to generate MIPS code for a program that won't work.
 
+Remove not initialized errors for identifiers passed as arguments
+
+Return arrays from functions
+
 ## Questions:
 How do I do arrays?
 ### 1. Allocating arrays
@@ -36,3 +40,4 @@ a[0] = 7;
 2. Add array literals
 3. Add array assignment from other arrays
 4. Add array eqaulity comparison
+5. Free arrays at the end of functions

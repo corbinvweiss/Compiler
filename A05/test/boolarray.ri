@@ -1,0 +1,5 @@
+fn main() {
+    let mut b: [bool; 3];
+    b = [true, true, false];
+    print(length(b));
+}

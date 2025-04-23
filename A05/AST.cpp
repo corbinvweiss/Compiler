@@ -588,12 +588,12 @@ void ArrayDeclNode::EmitCode(LabelTracker& LT) {
     // The number of bytes allocated is returned in $v1
     write("\taddi $sp, $sp, -4\t# allocate space on the stack for '%s'", identifier->getLexeme().c_str());
     int size = 4*(getType().size + 1);
-    write("\tli, $a0, %d\t\t# request %d bytes from malloc", size, size);
+    write("\tli, $a0, %d\t\t\t# request %d bytes from malloc", size, size);
     write("\tjal malloc");
     // TODO: add a runtime error for space not allocated.
     write("\tsw $v0, 4($sp)\t\t# store a pointer to the array on the stack");
-    write("li $t0, %d", getType().size);
-    write("\tsw $t0, ($v0)\t# put the number of elements in the start of the array");
+    write("\tli $t0, %d\t\t\t# number of elements in array", getType().size);
+    write("\tsw $t0, ($v0)\t\t# put the number of elements in the start of the array");
     // now I store the pointer to the first element of the array in the stack
     // at the offset associated with this identifier in the local symbol table
     // allocate space in the stack for the array
@@ -650,7 +650,7 @@ void ArrayLiteralNode::TypeCheck() {
         if(firstType.type == Type::i32) {
             setType(TypeInfo(Type::array_i32, size));
         }
-        else if(firstType.type == Type::i32) {
+        else if(firstType.type == Type::Bool) {
             setType(TypeInfo(Type::array_bool, size));
         }
     }
@@ -658,6 +658,32 @@ void ArrayLiteralNode::TypeCheck() {
 
 void ArrayLiteralNode::EmitCode(LabelTracker& LT) {
     std::cout << "Emitting code for ArrayLiteralNode\n";
+    // Array literals are used to set the values of arrays declared in memory
+    // 1. Evaluate the expressions on the right and store their results on the stack
+    // 2. Allocate space on the heap using malloc
+    // 3. Set the first element to the size of the array
+    // 4. Put the values of the expressions in the array
+    // 5. Push the pointer to the start of the array onto the stack
+
+    write("\t### Array Literal ###");
+    // iterate the expressions backwards so they come off the stack in order
+    for(std::vector<ASTNode*>::reverse_iterator riter = expressions->rbegin(); 
+        riter != expressions->rend(); ++riter) {
+        (*riter)->EmitCode(LT);
+    }
+    int size = 4*(getType().size + 1);
+    write("\tli, $a0, %d\t\t# request %d bytes from malloc", size, size);
+    write("\tjal malloc");
+    // TODO: add a runtime error for space not allocated.
+    write("\tli $t0, %d\t# size of array", getType().size);
+    write("\tsw $t0, ($v0)\t# put the number of elements in the start of the array");
+    // put the values into the array
+    for(size_t i=0; i < expressions->size(); i++) {
+        pop("$t0");
+        // put the value into the array at index i+1
+        write("\tsw $t0, %d($v0)\t# place the value into the array", 4*(i+1));
+    }
+    push("$v0");
 }
 
 
@@ -1380,8 +1406,15 @@ void IdentifierNode::EmitSetCode(LabelTracker& LT) {
     SymbolInfo* info = LocalST->lookup(lexeme);
     assert(info);
     int offset = info->GetOffset();
-    pop("$t0");
-    write("\tsw $t0, %d($fp)\t\t# set the value of '%s'", offset, lexeme.c_str());
+    pop("$s0");
+    Type type = info->getReturnType().type;
+    // if we are assigning to an array identifier using an array literal
+    // then we need to free the old pointer and point to the new array
+    if(type == Type::array_bool || type == Type::array_i32) {
+        write("\tlw $a0, %d($fp)\t\t# get the old array pointer", offset);
+        write("\tjal free\t\t# free the old pointer");
+    }
+    write("\tsw $s0, %d($fp)\t\t# set the value of '%s'", offset, lexeme.c_str());
 }
 
 TypeNode::TypeNode(TypeInfo t, ErrorData err) 
