@@ -3,8 +3,8 @@ Look [here](https://www.cs.southern.edu/halterman/Courses/Winter2025/415/Assignm
 
 [x] print literals.
 [x] local variables and expressions.
-[ ] loops and conditionals
-[ ] functions
+[x] loops and conditionals
+[x] functions
 [ ] arrays
 
 ## Someday
@@ -29,3 +29,10 @@ a points here
 a[0] = 7;
 5 7 0 0 0 0
 - - - - - - 
+
+
+---
+1. Add a length(array) to access array length
+2. Add array literals
+3. Add array assignment from other arrays
+4. Add array eqaulity comparison

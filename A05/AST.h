@@ -372,12 +372,24 @@ class PrintStatementNode: public ASTNode {
         bool newline;
         ActualArgsNode* actual_args;
     public:
-    PrintStatementNode(ASTNode* args, bool ln, ErrorData err);
-    ~PrintStatementNode();
-    void setGlobalST(SymbolTable* ST) override;
-    void setLocalST(SymbolTable* ST) override;
-    void TypeCheck() override;
-    void EmitCode(LabelTracker&) override; // Emit code for print statement
+        PrintStatementNode(ASTNode* args, bool ln, ErrorData err);
+        ~PrintStatementNode();
+        void setGlobalST(SymbolTable* ST) override;
+        void setLocalST(SymbolTable* ST) override;
+        void TypeCheck() override;
+        void EmitCode(LabelTracker&) override; // Emit code for print statement
+};
+
+class LengthNode: public ASTNode {
+    private:
+        IdentifierNode* identifier;
+    public:
+        LengthNode(ASTNode* id, ErrorData err);
+        ~LengthNode();
+        void setGlobalST(SymbolTable* ST) override;
+        void setLocalST(SymbolTable* ST) override;
+        void TypeCheck() override;
+        void EmitCode(LabelTracker&) override;
 };
 
 class UnaryNode : public ASTNode {

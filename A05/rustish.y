@@ -28,7 +28,7 @@ extern char *lineptr;
 %define parse.error verbose
 
 %token MAIN LCURLY RCURLY IDENTIFIER SEMICOLON NUMBER ASSIGN PRINT COMMA
-    PRINTLN ARROW COLON FN I32 BOOL LET MUT FALSE TRUE LPAREN RPAREN 
+    PRINTLN LENGTH ARROW COLON FN I32 BOOL LET MUT FALSE TRUE LPAREN RPAREN 
     PLUS MINUS TIMES DIVIDE MODULUS AND OR NOT IF ELSE WHILE RETURN
     LSQBRACK RSQBRACK NE EQ GT LT LE GE ERROR
 
@@ -199,6 +199,9 @@ expression      : func_call_expression {
                 | group {
                     $$ = $1;
                 }
+                | length {
+                    $$ = $1;
+                }
                 ;
 
 array_literal   : LSQBRACK expr_list RSQBRACK {
@@ -221,6 +224,10 @@ array_access    : identifier LSQBRACK expression RSQBRACK {
 
 group           : LPAREN expression RPAREN {
                     $$ = $2;
+                }
+
+length          : LENGTH LPAREN identifier RPAREN {
+                    $$ = new LengthNode($3, ERRDATA);
                 }
 
 binary          : expression PLUS expression {

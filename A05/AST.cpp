@@ -1141,6 +1141,41 @@ void PrintStatementNode::EmitCode(LabelTracker& LT) {
     write("\t### End of printstatement ###");
 }
 
+LengthNode::LengthNode(ASTNode* id, ErrorData err) 
+: ASTNode(err) {
+    identifier = static_cast<IdentifierNode*>(id);
+    setType(Type::i32);
+}
+
+LengthNode::~LengthNode() {
+    delete identifier;
+}
+
+void LengthNode::setGlobalST(SymbolTable* ST) {
+    identifier->setGlobalST(ST);
+    GlobalST = ST;
+}
+
+void LengthNode::setLocalST(SymbolTable* ST) {
+    identifier->setLocalST(ST);
+    LocalST = ST;
+}
+
+void LengthNode::TypeCheck() {
+    identifier->TypeCheck();
+    if(!(identifier->getType().type == Type::array_bool || identifier->getType().type == Type::array_i32)) {
+        error(err_data, "cannot get length of non-array type.");
+    }
+}
+
+void LengthNode::EmitCode(LabelTracker& LT) {
+    // get the length of the array reference by the identifier.
+    int offset = LocalST->lookup(identifier->getLexeme())->GetOffset();
+    write("\tlw $t0, %d($fp)\t\t# $t0 = address of the array", offset);
+    write("\tlw $t1, ($t0)\t\t# get the length of the array");
+    push("$t1");
+}
+
 
 UnaryNode::UnaryNode(std::string oper, ASTNode* r, ErrorData err)
 : ASTNode(err) 
