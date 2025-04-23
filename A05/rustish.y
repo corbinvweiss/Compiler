@@ -330,7 +330,6 @@ int main(int argc, char **argv) {
     }
 
     fdout = fopen("a.s", "w");
-    std::cout << fdout << '\n';
 
     yyparse();  // Call the Bison parser
 

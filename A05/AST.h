@@ -86,7 +86,7 @@ class ASTNode {
         virtual ~ASTNode() = default;
         virtual void setGlobalST(SymbolTable* ST) {};
         virtual void setLocalST(SymbolTable* ST) {};
-        virtual void TypeCheck() {};
+        virtual bool TypeCheck() { return true; };
         virtual ASTNode* FindReturn() {return nullptr;}
 
         virtual void setType(TypeInfo t) {
@@ -135,13 +135,13 @@ class ArrayLiteralNode: public ASTNode {
         void append(ASTNode* expression);
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
-        void TypeCheck() override;
+        bool TypeCheck() override;
         void EmitCode(LabelTracker&) override; // Emit code for an array literal
 };
 
 class LValueNode: public ASTNode {
     public:
-        virtual void initialize() = 0; // initialize the identifier or array
+        virtual void Initialize() = 0; // initialize the identifier or array
         LValueNode(ErrorData err): ASTNode(err) {}
         virtual std::string getLexeme() = 0;
         void EmitCode(LabelTracker&) override = 0; // Emit code for an l-value
@@ -156,10 +156,10 @@ class IdentifierNode: public LValueNode {
         ~IdentifierNode();
         std::string getLexeme() override;
         TypeInfo getType() override;
-        void TypeCheck() override;
+        bool TypeCheck() override;
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
-        void initialize() override;
+        void Initialize() override;
         void EmitCode(LabelTracker&) override; // Emit code for an identifier
         void EmitSetCode(LabelTracker&) override;   // Emit code for set identifier value
 };
@@ -174,9 +174,9 @@ class ArrayAccessNode: public LValueNode {
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
         TypeInfo getType() override;
-        void TypeCheck() override;
+        bool TypeCheck() override;
         std::string getLexeme() override;
-        void initialize() override;
+        void Initialize() override;
         void EmitCode(LabelTracker&) override; // Emit code for get array access
         void EmitSetCode(LabelTracker&) override;   // Emit code for set array access
         void Access(LabelTracker&);
@@ -189,7 +189,8 @@ class VarDeclNode: public ASTNode {
     public:
         VarDeclNode(ASTNode* id, ASTNode* t, ErrorData err);
         ~VarDeclNode();
-        void TypeCheck() override;
+        bool TypeCheck() override;
+        void Initialize();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
         void EmitCode(LabelTracker&) override; // Emit code for variable declaration
@@ -203,7 +204,7 @@ class ArrayDeclNode: public ASTNode {
     public:
         ArrayDeclNode(ASTNode* id, ASTNode* tp, ASTNode* len, ErrorData err);
         ~ArrayDeclNode();
-        void TypeCheck() override;
+        bool TypeCheck() override;
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
         void EmitCode(LabelTracker&) override; // Emit code for array declaration
@@ -216,7 +217,7 @@ class AssignmentStatementNode: public ASTNode {
     public:
         AssignmentStatementNode(ASTNode* identifier, ASTNode* expr, ErrorData err);
         ~AssignmentStatementNode();
-        void TypeCheck() override;
+        bool TypeCheck() override;
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
         void EmitCode(LabelTracker&) override; // Emit code for assignment statement
@@ -228,7 +229,7 @@ class StatementListNode: public ASTNode {
     public:
         StatementListNode(ErrorData err);
         ~StatementListNode();
-        void TypeCheck() override;
+        bool TypeCheck() override;
         void append(ASTNode* stmt);
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
@@ -243,7 +244,7 @@ class LocalDeclListNode: public ASTNode {
         LocalDeclListNode(ErrorData err);
         LocalDeclListNode(ASTNode* decl, ErrorData err);
         ~LocalDeclListNode();
-        void TypeCheck() override;
+        bool TypeCheck() override;
         void append(ASTNode* decl);
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
@@ -259,7 +260,7 @@ class MainDefNode: public ASTNode {
         ~MainDefNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
-        void TypeCheck() override;
+        bool TypeCheck() override;
         void EmitCode(LabelTracker&) override; // Emit code for the main function
 };
 
@@ -275,7 +276,7 @@ class ParamsListNode: public ASTNode {
         void setLocalST(SymbolTable* ST) override;
         int getSize() { return parameters->size(); }
         // note: the parameters of a function do not need a global symbol table
-        void TypeCheck() override;      // populate the parameters into the local symbol table
+        bool TypeCheck() override;      // populate the parameters into the local symbol table
         void EmitCode(LabelTracker&) override; // Emit code for parameters list
 };
 
@@ -291,8 +292,8 @@ class FuncDefNode: public ASTNode {
         ~FuncDefNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
-        void TypeCheck() override;
-        void CheckReturn();
+        bool TypeCheck() override;
+        bool CheckReturn();
         void EmitCode(LabelTracker&) override; // Emit code for function definition
 };
 
@@ -305,7 +306,7 @@ class ReturnNode: public ASTNode {
         ~ReturnNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
-        void TypeCheck() override;
+        bool TypeCheck() override;
         ASTNode* FindReturn() override;
         void EmitCode(LabelTracker&) override; // Emit code for return statement
 };
@@ -336,7 +337,7 @@ class CallNode: public ASTNode {
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
         TypeInfo getType() override;
-        void TypeCheck() override;
+        bool TypeCheck() override;
         void EmitCode(LabelTracker&) override; // Emit code for function call
 };
 
@@ -350,7 +351,7 @@ class IfStatementNode: public ASTNode {
         ~IfStatementNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
-        void TypeCheck() override;
+        bool TypeCheck() override;
         void EmitCode(LabelTracker&) override; // Emit code for if statement
 };
 
@@ -363,7 +364,7 @@ class WhileStatementNode: public ASTNode {
         ~WhileStatementNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
-        void TypeCheck() override;
+        bool TypeCheck() override;
         void EmitCode(LabelTracker&) override; // Emit code for while statement
 };
 
@@ -376,7 +377,7 @@ class PrintStatementNode: public ASTNode {
         ~PrintStatementNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
-        void TypeCheck() override;
+        bool TypeCheck() override;
         void EmitCode(LabelTracker&) override; // Emit code for print statement
 };
 
@@ -388,7 +389,7 @@ class LengthNode: public ASTNode {
         ~LengthNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
-        void TypeCheck() override;
+        bool TypeCheck() override;
         void EmitCode(LabelTracker&) override;
 };
 
@@ -401,7 +402,7 @@ class UnaryNode : public ASTNode {
         ~UnaryNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
-        void TypeCheck() override;
+        bool TypeCheck() override;
         void EmitCode(LabelTracker&) override; // Emit code for unary operation
 };
 
@@ -415,7 +416,7 @@ class BinaryNode : public ASTNode {
         ~BinaryNode();
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
-        void TypeCheck() override;
+        bool TypeCheck() override;
         bool BoolInt(TypeInfo t);
         void EmitCode(LabelTracker&) override; // Emit code for binary operation
 };
@@ -427,7 +428,7 @@ class FuncDefListNode: public ASTNode {
         FuncDefListNode(ErrorData err);
         ~FuncDefListNode();
         void append(ASTNode* func_def);
-        void TypeCheck() override;
+        bool TypeCheck() override;
         void setGlobalST(SymbolTable* ST) override;
         // note: the list of function def's do not exist in a local symbol table 
         void EmitCode(LabelTracker&) override; // Emit code for function definitions list

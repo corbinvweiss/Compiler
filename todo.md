@@ -39,5 +39,5 @@ a[0] = 7;
 1. Add a length(array) to access array length
 2. Add array literals
 3. Add array assignment from other arrays
-4. Add array eqaulity comparison
+4. Add array equality comparison
 5. Free arrays at the end of functions

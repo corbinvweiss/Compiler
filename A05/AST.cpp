@@ -106,10 +106,12 @@ ProgramNode::ProgramNode(ASTNode* func_list, ASTNode* main, FILE* fdout)
     func_def_list = static_cast<FuncDefListNode*>(func_list);
     main_def = static_cast<MainDefNode*>(main);
     setGlobalST(new SymbolTable());
-    func_def_list->TypeCheck();
-    main_def->TypeCheck();
-    LabelTracker LT = LabelTracker();
-    EmitCode(LT);
+    bool func_list_checked = func_def_list->TypeCheck();
+    bool main_checked = main_def->TypeCheck();
+    if(func_list_checked && main_checked) {
+        LabelTracker LT = LabelTracker();
+        EmitCode(LT);
+    }
 }
 
 ProgramNode::~ProgramNode() {
@@ -191,12 +193,19 @@ void MainDefNode::setLocalST(SymbolTable* ST) {
     stmt_list->setLocalST(ST);
 }
 
-void MainDefNode::TypeCheck() {
-    local_decl_list->TypeCheck();
-    stmt_list->TypeCheck();
-    std::cout << "---main---\n";
-    LocalST->show();
-    std::cout << "----------\n";
+bool MainDefNode::TypeCheck() {
+    bool decl_list_check = local_decl_list->TypeCheck();
+    bool stmt_list_check = stmt_list->TypeCheck();
+    if(decl_list_check && stmt_list_check) {
+        std::cout << "---main---\n";
+        LocalST->show();
+        std::cout << "----------\n";
+        return true;
+    }
+    else {
+        return false;
+    }
+
 }
 
 void MainDefNode::EmitCode(LabelTracker& LT) {
@@ -267,28 +276,35 @@ void FuncDefNode::setLocalST(SymbolTable* ST) {
 }
 
 
-void FuncDefNode::TypeCheck() {
+bool FuncDefNode::TypeCheck() {
+    bool unique = true;
     std::string lexeme = identifier->getLexeme();
     FunctionInfo* info = new FunctionInfo(getType(), params_list->getTypes());
     int valid = GlobalST->insert(lexeme, info);
     if(!valid) {
         error(err_data, "function '" + lexeme + "' already defined");
+        unique = false;
     }
-    params_list->TypeCheck();   // put parameters in local ST
-    local_decl_list->TypeCheck();
-    std::cout << "--- " << lexeme << " ---\n";
-    LocalST->show();
-    std::cout << "----------\n";
-    stmt_list->TypeCheck();
-    CheckReturn();
+    bool params_check = params_list->TypeCheck();   // put parameters in local ST
+    bool decl_check = local_decl_list->TypeCheck();
+    bool stmt_check = stmt_list->TypeCheck();
+    bool return_check = CheckReturn();
+    if(unique && params_check && decl_check && stmt_check && return_check) {
+        std::cout << "--- " << lexeme << " ---\n";
+        LocalST->show();
+        std::cout << "----------\n";
+        return true;
+    }
+    return false;
 }
 
-void FuncDefNode::CheckReturn() {
+bool FuncDefNode::CheckReturn() {
     std::vector<ASTNode*> return_stmts = stmt_list->FindReturns();
     // expected return type but got no return statements
     if(getType().type != Type::none && return_stmts.empty()) {
         error(err_data, "function '" + identifier->getLexeme() + 
         "' missing return of type '" + typeToString(getType()) + "'");
+        return false;
     }
     else {
         for(ASTNode* return_stmt: return_stmts) {
@@ -297,10 +313,12 @@ void FuncDefNode::CheckReturn() {
                 if(getType().type != return_stmt->getType().type) {
                     error(return_stmt->err_data, "function '" + identifier->getLexeme() + "' expected return of type '"  + 
                     typeToString(getType()) + "' but got return of type '" + typeToString(return_stmt->getType()) + "'");
+                    return false;
                 }
             }
         }
     }
+    return true;
 }
 
 void FuncDefNode::EmitCode(LabelTracker& LT) {
@@ -345,13 +363,14 @@ void ReturnNode::setLocalST(SymbolTable* ST) {
     if(expression) expression->setLocalST(ST);
 }
 
-void ReturnNode::TypeCheck() {
+bool ReturnNode::TypeCheck() {
     if(expression) {
         setType(expression->getType());
     }
     else {
         setType(Type::none);
     }
+    return true;
 }
 
 ASTNode* ReturnNode::FindReturn() {
@@ -400,10 +419,17 @@ void ParamsListNode::setLocalST(SymbolTable* ST) {
     }
 }
 
-void ParamsListNode::TypeCheck() {
+bool ParamsListNode::TypeCheck() {
+    bool checked = true;
     for(VarDeclNode* param: *parameters) {
-        param->TypeCheck();
+        if(!param->TypeCheck()) {
+            checked = false;
+        }
+        // parameters are automatically considered initialized
+        // because they are passed from outside the function
+        param->Initialize();
     }
+    return checked;
 }
 
 void ParamsListNode::EmitCode(LabelTracker& LT) {
@@ -430,10 +456,14 @@ void FuncDefListNode::append(ASTNode* func_def) {
     func_def_list->push_back(static_cast<FuncDefNode*>(func_def));
 }
 
-void FuncDefListNode::TypeCheck() {
+bool FuncDefListNode::TypeCheck() {
+    bool checked = true;
     for(FuncDefNode* func_def : *func_def_list) {
-        func_def->TypeCheck();
+        if(!func_def->TypeCheck()) {
+            checked = false;
+        }
     }
+    return checked;
 }
 
 void FuncDefListNode::setGlobalST(SymbolTable* ST) {
@@ -474,10 +504,14 @@ void LocalDeclListNode::append(ASTNode* decl) {
     decl_list->push_back(static_cast<VarDeclNode*>(decl));
 }
 
-void LocalDeclListNode::TypeCheck() {
+bool LocalDeclListNode::TypeCheck() {
+    bool checked = true;
     for(VarDeclNode* declaration : *decl_list) {
-        declaration->TypeCheck();
+        if(!declaration->TypeCheck()) {
+            checked = false;
+        }
     }
+    return checked;
 }
 
 void LocalDeclListNode::setGlobalST(SymbolTable* ST) {
@@ -512,7 +546,7 @@ VarDeclNode::~VarDeclNode() {
     delete identifier;
     delete type;
 }
-void VarDeclNode::TypeCheck() {
+bool VarDeclNode::TypeCheck() {
     std::string lexeme = identifier->getLexeme();
     IdentifierInfo* info = new IdentifierInfo(getType());
     int valid = LocalST->insert(lexeme, info);
@@ -521,7 +555,13 @@ void VarDeclNode::TypeCheck() {
     }
     else {
         error( err_data, "identifier '" + lexeme + "' redeclared");
+        return false;
     }
+    return true;
+}
+
+void VarDeclNode::Initialize() {
+    identifier->Initialize();
 }
 
 void VarDeclNode::setGlobalST(SymbolTable* ST) {
@@ -568,7 +608,7 @@ void ArrayDeclNode::setLocalST(SymbolTable* ST) {
     LocalST = ST;
 }
 
-void ArrayDeclNode::TypeCheck() {
+bool ArrayDeclNode::TypeCheck() {
     std::string lexeme = identifier->getLexeme();
     IdentifierInfo* info = new IdentifierInfo(getType());
     int valid = LocalST->insert(lexeme, info);
@@ -577,7 +617,9 @@ void ArrayDeclNode::TypeCheck() {
     }
     else {
         error(err_data, "identifier '" + lexeme + "' redeclared");
+        return false;
     }
+    return true;
 }
 
 void ArrayDeclNode::EmitCode(LabelTracker& LT) {
@@ -628,15 +670,18 @@ void ArrayLiteralNode::setLocalST(SymbolTable* ST) {
     }
 }
 
-void ArrayLiteralNode::TypeCheck() {
+bool ArrayLiteralNode::TypeCheck() {
+    bool check = true;
     for(ASTNode* expr : *expressions) {
-        expr->TypeCheck();
+        if(!expr->TypeCheck()) {
+            check = false;
+        }
     }
     if(!expressions->empty()) {
         TypeInfo firstType = expressions->front()->getType();
         if(!(firstType.type == Type::i32 || firstType.type == Type::Bool)) {
             error(err_data, "invalid array literal: expected bool or i32 but got type '" + typeToString(firstType) + "'");
-            return;
+            check = false;
         }
         int size = expressions->size();
         // check that all expressions have the same type as the first element
@@ -644,7 +689,7 @@ void ArrayLiteralNode::TypeCheck() {
             if(expr->getType().type != firstType.type) {
                 error(err_data, "invalid array literal: expected values of type '" + typeToString(firstType) 
                 + "' but got '" + typeToString(expr->getType())+ "'");
-                return;
+                check = false;
             }
         }
         if(firstType.type == Type::i32) {
@@ -654,6 +699,11 @@ void ArrayLiteralNode::TypeCheck() {
             setType(TypeInfo(Type::array_bool, size));
         }
     }
+    else {
+        error(err_data, "invalid array literal: empty array");
+        check = false;
+    }
+    return check;
 }
 
 void ArrayLiteralNode::EmitCode(LabelTracker& LT) {
@@ -704,12 +754,14 @@ void StatementListNode::append(ASTNode* stmt) {
     stmt_list->push_back(stmt);
 }
 
-void StatementListNode::TypeCheck() {
-    // std::cout << "in StatementListNode::UpdateSymbolTable\n";
+bool StatementListNode::TypeCheck() {
+    bool check = true;
     for(ASTNode* stmt : *stmt_list) {
-        // std::cout << "iterating next statement\n";
-        stmt->TypeCheck();
+        if(!stmt->TypeCheck()) {
+            check = false;
+        }
     }
+    return check;
 }
 
 void StatementListNode::setGlobalST(SymbolTable* ST) {
@@ -758,17 +810,21 @@ AssignmentStatementNode::~AssignmentStatementNode() {
     delete expression;
 }
 
-void AssignmentStatementNode::TypeCheck() {
-    expression->TypeCheck();
+bool AssignmentStatementNode::TypeCheck() {
+    if(!expression->TypeCheck()) {
+        return false;
+    }
     // fetch the information for this identifier from the LocalST
     TypeInfo rtype = expression->getType();
     TypeInfo ltype = identifier->getType();
     if(!(ltype.type == rtype.type && ltype.size == rtype.size)) {
         error(err_data, "cannot assign '" + typeToString(rtype) + "' to type '" + typeToString(ltype) + "'");
+        return false;
     }
     else {
-        identifier->initialize();
+        identifier->Initialize();
     }
+    return true;
 }
 
 void AssignmentStatementNode::setGlobalST(SymbolTable* ST) {
@@ -880,27 +936,30 @@ TypeInfo CallNode::getType() {
     return func->getReturnType();
 }
 
-void CallNode::TypeCheck() {
+bool CallNode::TypeCheck() {
     std::vector<TypeInfo> args = actual_args->argTypes();
     std::string lexeme = identifier->getLexeme();
     FunctionInfo* funcInfo = static_cast<FunctionInfo*>(GlobalST->lookup(lexeme));
     if(!funcInfo) { // the function is not defined
         error(err_data, "undefined function '" + lexeme + "'");
-        return;
+        return false;
     }
     std::vector<TypeInfo> funcParams = funcInfo->getParamList();
     if(args.size() != funcParams.size()) {
         std::string msg = "wrong number of arguments: expected " + std::to_string(funcParams.size()) + " but got " + std::to_string(args.size())+ "";
         error(err_data, msg);
+        return false;
     }
     else {
         for(std::size_t i=0; i<funcParams.size(); ++i) {
             if(!(funcParams[i].type == args[i].type)) {
                 error(err_data, "wrong type of arguments. Expected " + typeToString(funcParams) + 
                 " but got " + typeToString(args) + "");
+                return false;
             }
         }
     }
+    return true;
 }
 
 void CallNode::EmitCode(LabelTracker& LT) {
@@ -954,16 +1013,20 @@ std::string ArrayAccessNode::getLexeme() {
     return identifier->getLexeme();
 }
 
-void ArrayAccessNode::TypeCheck() {
-    expression->TypeCheck();
+bool ArrayAccessNode::TypeCheck() {
+    if(!expression->TypeCheck()) {
+        return false;
+    }
     Type exprType = expression->getType().type;
     if(exprType != Type::i32) {
         error(err_data, "cannot use type '" + typeToString(exprType) + "' for array access");
+        return false;
     }
+    return true;
 }
 
-void ArrayAccessNode::initialize() {
-    identifier->initialize();
+void ArrayAccessNode::Initialize() {
+    identifier->Initialize();
 }
 
 void ArrayAccessNode::Access(LabelTracker& LT) {
@@ -1029,15 +1092,24 @@ void IfStatementNode::setLocalST(SymbolTable* ST) {
     }
 }
 
-void IfStatementNode::TypeCheck() {
-    expression->TypeCheck();
+bool IfStatementNode::TypeCheck() {
+    bool check = true;
+    if(!expression->TypeCheck()) {
+        check = false;
+    }
     if(expression->getType().type != Type::Bool) {
         error(err_data, "expected boolean condition but got '" + typeToString(expression->getType()) + "'");
+        check = false;
     }
-    if_branch->TypeCheck();
+    if(!if_branch->TypeCheck()) {
+        check = false;
+    }
     if (else_branch) {
-        else_branch->TypeCheck();
+        if(!else_branch->TypeCheck()) {
+            check = false;
+        }
     }
+    return check;
 }
 
 void IfStatementNode::EmitCode(LabelTracker& LT) {
@@ -1080,12 +1152,18 @@ void WhileStatementNode::setLocalST(SymbolTable* ST) {
     body->setLocalST(ST);
 }
 
-void WhileStatementNode::TypeCheck() {
-    expression->TypeCheck();
+bool WhileStatementNode::TypeCheck() {
+    if(!expression->TypeCheck()) {
+        return false;
+    }
     if(expression->getType().type != Type::Bool) {
         error(err_data, "expected boolean condition but got '" + typeToString(expression->getType()) + "'");
+        return false;
     }
-    body->TypeCheck();
+    if(!body->TypeCheck()) {
+        return false;
+    }
+    return true;
 }
 
 void WhileStatementNode::EmitCode(LabelTracker& LT) {
@@ -1122,15 +1200,20 @@ void PrintStatementNode::setLocalST(SymbolTable* ST) {
     actual_args->setLocalST(ST);
 }
 
-void PrintStatementNode::TypeCheck() {
-    actual_args->TypeCheck();
+bool PrintStatementNode::TypeCheck() {
+    if(!actual_args->TypeCheck()) {
+        return false;
+    }
     // make sure all arguments are bools or ints
     std::vector<TypeInfo> types = actual_args->argTypes();
+    bool check = true;
     for(TypeInfo typeInfo : types) {
         if(!(typeInfo.type == Type::i32 || typeInfo.type == Type::Bool)) {
             error(err_data, "cannot print type '" + typeToString(typeInfo) + "'");
+            check = false;
         }
     }
+    return check;
 }
 
 void PrintStatementNode::EmitCode(LabelTracker& LT) {
@@ -1187,11 +1270,15 @@ void LengthNode::setLocalST(SymbolTable* ST) {
     LocalST = ST;
 }
 
-void LengthNode::TypeCheck() {
-    identifier->TypeCheck();
+bool LengthNode::TypeCheck() {
+    if(!identifier->TypeCheck()) {
+        return false;
+    }
     if(!(identifier->getType().type == Type::array_bool || identifier->getType().type == Type::array_i32)) {
         error(err_data, "cannot get length of non-array type.");
+        return false;
     }
+    return true;
 }
 
 void LengthNode::EmitCode(LabelTracker& LT) {
@@ -1225,13 +1312,17 @@ void UnaryNode::setLocalST(SymbolTable* ST) {
     right->setLocalST(ST);
 }
 
-void UnaryNode::TypeCheck() {
-    right->TypeCheck();
+bool UnaryNode::TypeCheck() {
+    if(!right->TypeCheck()) {
+        return false;
+    }
     TypeInfo opType = GetOpType(op).op_type;
     if(right->getType().type != opType.type) {
         error(err_data, "cannot apply operator " + op + 
             " to type " + typeToString(right->getType()));
+        return false;
     }
+    return true;
 }
 
 void UnaryNode::EmitCode(LabelTracker& LT) {
@@ -1283,9 +1374,9 @@ bool BinaryNode::BoolInt(TypeInfo t) {
     }
 }
 
-void BinaryNode::TypeCheck() {
-    left->TypeCheck();
-    right->TypeCheck();
+bool BinaryNode::TypeCheck() {
+    if(!right->TypeCheck()) return false;
+    if(!left->TypeCheck()) return false;
     TypeInfo lType = left->getType();
     TypeInfo rType = right->getType();
     // check that both operands are ints or bools
@@ -1294,16 +1385,19 @@ void BinaryNode::TypeCheck() {
     // check that both operands are the same type
     if(!(lType.type == rType.type && lType.size == rType.size)) {
         error(err_data, "incompatible types '" + typeToString(lType) + "' and '" + typeToString(rType) + "'");
+        return false;
     }
     // check that both operands are compatible with the operator
     TypeInfo opType = GetOpType(op).op_type;
     if(lType.type != opType.type && opType.type != Type::any) {
         error(err_data, "ltype '" + typeToString(lType) + "' not compatible with operator '" + op + "'");
+        return false;
     }
     if(rType.type != opType.type && opType.type != Type::any) {
         error(err_data, "rtype '" + typeToString(rType) + "' not compatible with operator '" + op + "'");
+        return false;
     }
-
+    return true;
 }
 
 void BinaryNode::EmitCode(LabelTracker& LT) {
@@ -1357,16 +1451,19 @@ std::string IdentifierNode::getLexeme() {
     return lexeme;
 }
 
-void IdentifierNode::TypeCheck() {
+bool IdentifierNode::TypeCheck() {
     IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
     if(info) { // identifier exists in local symbol table
         if(!info->IsInitialized()) {  // identifier is initialized
             error(err_data, "Identifier '" + lexeme + "' not initialized");
+            return false;
         }
     }
     else {
         error(err_data, "Identifier '" + lexeme + "' not found");
+        return false;
     }
+    return true;
 }
 
 TypeInfo IdentifierNode::getType() {
@@ -1380,7 +1477,7 @@ TypeInfo IdentifierNode::getType() {
     return Type::none;
 }
 
-void IdentifierNode::initialize() {
+void IdentifierNode::Initialize() {
     IdentifierInfo* info = static_cast<IdentifierInfo*>(LocalST->lookup(lexeme));
     if(info) info->Initialize();
 }
