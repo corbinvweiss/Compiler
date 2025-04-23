@@ -53,20 +53,25 @@ class SymbolInfo {
     private:
         TypeInfo return_type = TypeInfo(Type::none);
         int stack_offset = 0;
+        bool local; // if local, need to free arrays.
     public:
         SymbolInfo(TypeInfo returnType);
+        SymbolInfo(TypeInfo returnType, bool local);
         TypeInfo getReturnType();
         virtual std::string show() = 0; // display the symbol info in a human-readable format
         int GetOffset() { return stack_offset; }
         void SetOffset(int value) { stack_offset = value; }
+        bool IsLocal() { return local; }
 };
 
 class IdentifierInfo : public SymbolInfo {
+    private:
         bool initialized;
     public:
         bool IsInitialized() { return initialized; }
         void Initialize() { initialized = true; }
-        IdentifierInfo(TypeInfo t) : SymbolInfo(t) {}
+        IdentifierInfo(TypeInfo t) : SymbolInfo(t), initialized(false) {}
+        IdentifierInfo(TypeInfo t, bool local) : SymbolInfo(t, local), initialized(false) {}
         std::string show();
 };
 

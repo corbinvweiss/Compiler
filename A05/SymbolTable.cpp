@@ -45,3 +45,16 @@ void SymbolTable::show() {
         std::cout << it->first << ": " << it->second->show() + "\n";
     }
 }
+
+std::vector<SymbolInfo*> SymbolTable::FindLocalArrays() {
+    std::vector<SymbolInfo*> result = {};
+    for(auto it = this->symbols.begin(); it != this->symbols.end(); ++it){
+        Type t = it->second->getReturnType().type;
+        if(t == Type::array_bool || t == Type::array_i32) {
+            if(it->second->IsLocal()) {
+                result.push_back(it->second);
+            }
+        }
+    }
+    return result;
+}

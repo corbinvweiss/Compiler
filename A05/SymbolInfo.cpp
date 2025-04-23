@@ -62,6 +62,8 @@ SymbolInfo::SymbolInfo(TypeInfo t)
 TypeInfo SymbolInfo::getReturnType() {
     return return_type;
 }
+SymbolInfo::SymbolInfo(TypeInfo t, bool local)
+: return_type(t), local(local) {}
 
 // **************************
 

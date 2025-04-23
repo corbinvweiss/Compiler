@@ -84,7 +84,7 @@ void LabelTracker::BeginWhileLabel() {
 }
 
 void LabelTracker::BranchWhile(const char* reg) {
-    write("\tbeqz %s, _endwhile%d\t\t# go to end of while", reg, while_stack.top());
+    write("\tbeqz %s, _endwhile%d\t# go to end of while", reg, while_stack.top());
 }
 
 void LabelTracker::JumpBeginWhile() {
@@ -132,7 +132,6 @@ void ProgramNode::setLocalST(SymbolTable* ST) {
 }
 
 void ProgramNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for ProgramNode\n";
     write("\t.data");
     write("\ttrue: .asciiz \"true\"\t# define the true string");
     write("\tfalse: .asciiz \"false\"\t# define the false string");
@@ -209,10 +208,16 @@ bool MainDefNode::TypeCheck() {
 }
 
 void MainDefNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for MainDefNode\n";
     begin_func("main");
     local_decl_list->EmitCode(LT);
     stmt_list->EmitCode(LT);
+    // free any arrays allocated by the function
+    for(SymbolInfo* arr : LocalST->FindLocalArrays()) {
+        int offset = arr->GetOffset();
+        write("\tlw $t0, %d($fp)\t\t# load address of array for freeing", offset);
+        write("\tmove $a0, $t0\t\t# pass address of array to free()");
+        write("\tjal free\t\t\t# free the array");
+    }
     end_func("main");
 }
 
@@ -230,10 +235,11 @@ void begin_func(std::string name) {
 
 void end_func(std::string name) {
     write("\t### END OF FUNCTION \"%s\" ###", name.c_str());
+    // free all arrays declared in the function
     write("\tmove $sp, $fp\t\t# clear the stack of local variables");
     write("\tlw $ra, 4($fp)\t\t# fetch the $ra from the stack");
     write("\tlw $fp, 8($fp)\t\t# reset the $fp to the caller state");
-    write("\taddi $sp, $sp, 8\t\t# reset the stack");
+    write("\taddi $sp, $sp, 8\t# reset the stack");
     write("\tjr $ra");
 }
 
@@ -322,7 +328,6 @@ bool FuncDefNode::CheckReturn() {
 }
 
 void FuncDefNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for FuncDefNode\n";
     std::string lexeme = identifier->getLexeme();
     begin_func(lexeme);
     params_list->EmitCode(LT);
@@ -337,6 +342,13 @@ void FuncDefNode::EmitCode(LabelTracker& LT) {
     }
     local_decl_list->EmitCode(LT);
     stmt_list->EmitCode(LT);
+    // free any arrays allocated by the function
+    for(SymbolInfo* arr : LocalST->FindLocalArrays()) {
+        int offset = arr->GetOffset();
+        write("\tlw $t0, %d($fp)\t\t# load address of array for freeing", offset);
+        write("\tmove $a0, $t0\t\t\t# pass address of array to free()");
+        write("\t jal free\t\t\t# free the array");
+    }
     end_func(lexeme);
 }
 
@@ -378,7 +390,6 @@ ASTNode* ReturnNode::FindReturn() {
 }
 
 void ReturnNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for ReturnNode\n";
     expression->EmitCode(LT);   // evaluate the expression
     pop("$v0");                 // put the return value in $v0
 }
@@ -433,8 +444,6 @@ bool ParamsListNode::TypeCheck() {
 }
 
 void ParamsListNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for ParamsListNode\n";
-    // TODO: initialize this like a local_var_decl_list
     for(VarDeclNode* param : *parameters) {
         param->EmitCode(LT);  // allocate space for the parameters
     }
@@ -477,7 +486,6 @@ void FuncDefListNode::EmitCode(LabelTracker& LT) {
     for(FuncDefNode* func_def : *func_def_list) {
         func_def->EmitCode(LT);
     }
-    std::cout << "Emitting code for FuncDefListNode\n";
 }
 
 
@@ -529,7 +537,6 @@ void LocalDeclListNode::setLocalST(SymbolTable* ST) {
 }
 
 void LocalDeclListNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for LocalDeclListNode\n";
     for(VarDeclNode* decl : *decl_list) {
         decl->EmitCode(LT);
     }
@@ -575,7 +582,6 @@ void VarDeclNode::setLocalST(SymbolTable* ST) {
 }
 
 void VarDeclNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for VarDeclNode\n";
     write("\taddi $sp, $sp, -4\t# allocating space for '%s'", identifier->getLexeme().c_str());
     write("\tlw $zero, 4($sp)\t# initializing '%s' to default of 0", identifier->getLexeme().c_str());
 }
@@ -610,7 +616,7 @@ void ArrayDeclNode::setLocalST(SymbolTable* ST) {
 
 bool ArrayDeclNode::TypeCheck() {
     std::string lexeme = identifier->getLexeme();
-    IdentifierInfo* info = new IdentifierInfo(getType());
+    IdentifierInfo* info = new IdentifierInfo(getType(), true);
     int valid = LocalST->insert(lexeme, info);
     if(valid) {
         // std::cout << lexeme << " : " << typeToString(getType()) << '\n';
@@ -623,7 +629,6 @@ bool ArrayDeclNode::TypeCheck() {
 }
 
 void ArrayDeclNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for ArrayDeclNode\n";
     // I need four bytes for each element of the array plus 
     // four bytes for the size of the array 
     // The pointer to the array is returned in $v0
@@ -707,7 +712,6 @@ bool ArrayLiteralNode::TypeCheck() {
 }
 
 void ArrayLiteralNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for ArrayLiteralNode\n";
     // Array literals are used to set the values of arrays declared in memory
     // 1. Evaluate the expressions on the right and store their results on the stack
     // 2. Allocate space on the heap using malloc
@@ -731,7 +735,7 @@ void ArrayLiteralNode::EmitCode(LabelTracker& LT) {
     for(size_t i=0; i < expressions->size(); i++) {
         pop("$t0");
         // put the value into the array at index i+1
-        write("\tsw $t0, %d($v0)\t# place the value into the array", 4*(i+1));
+        write("\tsw $t0, %d($v0)\t\t# place the value into the array", 4*(i+1));
     }
     push("$v0");
 }
@@ -791,7 +795,6 @@ std::vector<ASTNode*> StatementListNode::FindReturns() {
 }
 
 void StatementListNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for StatementListNode\n";
     for(ASTNode* stmt: *stmt_list) {
         stmt->EmitCode(LT);
     }
@@ -840,7 +843,6 @@ void AssignmentStatementNode::setLocalST(SymbolTable* ST) {
 }
 
 void AssignmentStatementNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for AssignmentStatementNode\n";
     expression->EmitCode(LT); // expression does its thing and stores its result at 4($sp)
     identifier->EmitSetCode(LT);
 }
@@ -896,7 +898,6 @@ std::vector<TypeInfo> ActualArgsNode::argTypes() {
 }
 
 void ActualArgsNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for ActualArgsNode\n";
     write("\t### Actual Args ###");
     // The arguments will be pulled off the stack in reverse order,
     // so we must put them on in reverse order
@@ -963,7 +964,6 @@ bool CallNode::TypeCheck() {
 }
 
 void CallNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for CallNode\n";
     write("\t### Call ###");
     std::string lexeme = identifier->getLexeme();
     actual_args->EmitCode(LT);
@@ -1041,13 +1041,12 @@ void ArrayAccessNode::Access(LabelTracker& LT) {
     write("\tblt $s0, $zero, __error_outofbounds\t# negative array index error");
     // todo: check for negative indices
 
-    write("\taddi $t2, $s0, 1\t\t# add 1 to the index for the irrelavent first element");
+    write("\taddi $t2, $s0, 1\t# add 1 to the index for the irrelavent first element");
     write("\tsll $t2, $t2, 2\t\t# multiply $t2 by 4 to get byte size");
-    write("\tadd $t2, $t2, $t0\t\t# add the offset ($t2) to the beginning of the array ($t0)");
+    write("\tadd $t2, $t2, $t0\t# add the offset ($t2) to the beginning of the array ($t0)");
 }
 
 void ArrayAccessNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for ArrayAccessNode\n";
     // access an element of an array
     Access(LT);
     write("\tlw $s1, ($t2)\t\t# get the element at given index");
@@ -1113,7 +1112,6 @@ bool IfStatementNode::TypeCheck() {
 }
 
 void IfStatementNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for IfStatementNode\n";
     write("\t### If Statement ###");
     expression->EmitCode(LT);
     pop("$s0");
@@ -1167,7 +1165,6 @@ bool WhileStatementNode::TypeCheck() {
 }
 
 void WhileStatementNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for WhileStatementNode\n";
     write("\t### While Statement ###");
     LT.BeginWhileLabel();
     expression->EmitCode(LT);
@@ -1217,7 +1214,6 @@ bool PrintStatementNode::TypeCheck() {
 }
 
 void PrintStatementNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for PrintStatementNode\n";
     write("\n\t### PrintStatement ###");
     for(ASTNode* arg : *(actual_args->getArgs())) {
         arg->EmitCode(LT);
@@ -1232,20 +1228,20 @@ void PrintStatementNode::EmitCode(LabelTracker& LT) {
         }
         else if(arg->getType().type == Type::i32) {
             pop("$a0");
-            write("\tli $v0, 1     \t# print integer service");
-            write("\tsyscall       \t# print the number");
+            write("\tli $v0, 1 \t\t\t# print integer service");
+            write("\tsyscall   \t\t\t# print the number");
         }
-        write("\tli $a0, 0x20  \t# load a space");
-        write("\tli $v0, 11    \t# print character service");
-        write("\tsyscall       \t# print the space");
+        write("\tli $a0, 0x20  \t\t# load a space");
+        write("\tli $v0, 11    \t\t# print character service");
+        write("\tsyscall       \t\t# print the space");
     }
-    write("\tli $a0, 0x20  \t# load a space");
-    write("\tli $v0, 11    \t# print character service");
-    write("\tsyscall       \t# print the space");
+    write("\tli $a0, 0x20  \t\t# load a space");
+    write("\tli $v0, 11    \t\t# print character service");
+    write("\tsyscall       \t\t# print the space");
     if(newline) {
-        write("\tli $a0, 0xA  \t# load a newline");
-        write("\tli $v0, 11    \t# print character service");
-        write("\tsyscall       \t# print the newline");
+        write("\tli $a0, 0xA  \t\t# load a newline");
+        write("\tli $v0, 11   \t\t# print character service");
+        write("\tsyscall       \t\t# print the newline");
     }
     write("\t### End of printstatement ###");
 }
@@ -1326,7 +1322,6 @@ bool UnaryNode::TypeCheck() {
 }
 
 void UnaryNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for UnaryNode\n";
     right->EmitCode(LT);
     pop("$t0");
     if(op == "!") {
@@ -1401,7 +1396,6 @@ bool BinaryNode::TypeCheck() {
 }
 
 void BinaryNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for BinaryNode\n";
     // left side goes in $s0, right side goes in $s1
     write("\t### Binary Node ###");
     left->EmitCode(LT);
@@ -1427,15 +1421,15 @@ void BinaryNode::EmitCode(LabelTracker& LT) {
     } else if(op == "==") {
         write("\tseq  $s2, $s0, $s1\t# equal");
     } else if(op == "!=") {
-        write("\tsne  $s2, $s0, $s1\t # not equal");
+        write("\tsne  $s2, $s0, $s1\t# not equal");
     } else if(op == "<=") {
-        write("\tsle  $s2, $s0, $s1\t # less than or equal");
+        write("\tsle  $s2, $s0, $s1\t# less than or equal");
     } else if(op == ">=") {
-        write("\tsge  $s2, $s0, $s1\t # greater or equal");
+        write("\tsge  $s2, $s0, $s1\t# greater or equal");
     } else if(op == "<") {
-        write("\tslt  $s2, $s0, $s1\t # less than");
+        write("\tslt  $s2, $s0, $s1\t# less than");
     } else if(op == ">") {
-        write("\tsgt  $s2, $s0, $s1\t # greater than");
+        write("\tsgt  $s2, $s0, $s1\t# greater than");
     }
     push("$s2");    // push the result onto the stack again.
     write("\t### end of Binary Node ###");
@@ -1491,7 +1485,6 @@ void IdentifierNode::setLocalST(SymbolTable* ST) {
 }
 
 void IdentifierNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for IdentifierNode\n";
     SymbolInfo* info = LocalST->lookup(lexeme);
     assert(info);
     int offset = info->GetOffset();
@@ -1522,7 +1515,6 @@ TypeNode::TypeNode(TypeInfo t, ErrorData err)
 TypeNode::~TypeNode() {}
 
 void TypeNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for TypeNode\n";
 }
 
 NumberNode::NumberNode(int val, ErrorData err)
@@ -1537,7 +1529,6 @@ int NumberNode::getValue() {
 }
 
 void NumberNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for NumberNode\n";
     write("\tli, $t0, %d\t\t\t# load the value of the number", value);
     push("$t0");
 }
@@ -1554,7 +1545,6 @@ bool BoolNode::getValue() {
 }
 
 void BoolNode::EmitCode(LabelTracker& LT) {
-    std::cout << "Emitting code for BoolNode\n";
     if(value) {
         write("\tli, $t0, 1\t\t\t# loading 'true'");
     }
