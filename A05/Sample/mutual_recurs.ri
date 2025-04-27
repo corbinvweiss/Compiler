@@ -1,0 +1,30 @@
+fn f(n: i32) {
+    if n > 0 {
+        println(0, n);  
+        g(n - 1);
+    }
+}
+
+fn g(n: i32) -> i32 {
+    if n > 0 {
+        println(1, n);
+        f(n - 1);
+    } else {;}
+}
+
+fn main() {
+    g(0);
+    println();
+    g(1);
+    println();
+    g(2);
+    println();
+    g(3);
+    println();
+    g(4);
+    println();
+    g(5);
+    println();
+    g(20);
+    println();
+}

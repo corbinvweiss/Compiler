@@ -1,12 +1,13 @@
 fn main() {
-    let mut a: [i32; 7];
+    let mut a: [i32; 7000000];
     let mut i: i32;
     a[1] = 3;
     println(a[1]);
+    println(a[3]);
     println(length(a));
-    i = 0;
-    while i < length(a) {
-        println(i, a[i]);
-        i = i + 1;
-    }
+    //i = 0;
+    //while i < length(a) {
+     //   println(i, a[i]);
+      //  i = i + 1;
+    //}
 }

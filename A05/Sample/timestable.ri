@@ -1,0 +1,16 @@
+fn main()
+{
+    let mut row: i32;
+    let mut col: i32;
+
+    row = 1;
+    while row <= 10 {
+        col = 1;
+        while col <= 10 {
+            print(row*col);
+            col = col + 1;
+        }
+        println();
+        row = row + 1;
+    }
+}

@@ -1,0 +1,11 @@
+fn main() {
+    let mut x: i32;
+    let mut a: [i32; 5];   // Heap allocated
+
+    x = 7;
+    x = a[3];
+    print(x);
+    println(a[0]);
+    println(x + a[0]);
+    println(a[0] * x);
+}

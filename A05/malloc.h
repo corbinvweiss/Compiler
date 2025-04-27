@@ -119,29 +119,6 @@ free:
 	sub $t1 $a0 16	# subtract 16 from the address to get the start
 			# of the malloc overhead for this chunk
 	
-	     ##### START OF ERROR CHECKING CODE #####
-	lw $t0 -4($a0)	# load memory type
-	bnez $t0 goodtype # if memory is used, continue
-	la $a0 ferror	# otherwise, trying to free already free memory
-	li $v0 4	#
-	syscall		# print error message
-	li $v0 10	#
-	syscall		# exit program
-goodtype:
-	lw $t0 mused	# load address of first used block
-usedloop:
-	beqz $t0 usederror # memory not malloced
-	beq $t0 $t1 goodaddress # memory address is valid
-	lw $t0 4($t0)	# load next address in used list
-	b usedloop	# while (ptr!=NULL)
-usederror:
-	la $a0 uerror	# otherwise, trying to free memory not malloced
-	li $v0 4	#
-	syscall		# print error message
-	li $v0 10	#
-	syscall		# exit program
-	     ##### END OF ERROR CHECKING CODE #####
-	
 	     ##### at this point we know we were passed a good address #####
 goodaddress:
 	lw $t0 mfree	# load the address of the free list

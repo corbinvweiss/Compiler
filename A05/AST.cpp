@@ -136,6 +136,7 @@ void ProgramNode::EmitCode(LabelTracker& LT) {
     write("\ttrue: .asciiz \"true\"\t# define the true string");
     write("\tfalse: .asciiz \"false\"\t# define the false string");
     write("\tdiv0: .asciiz \"runtime error: cannot divide by zero.\"");
+    write("\tnospace: .asciiz \"runtime error: malloc cannot allocate requested number of bytes\"");
     write("\toutofbounds: .asciiz \"runtime error: index out of bounds.\"");
     fprintf(FDOUT, "%s", MALLOC_HEADER);
     write("\t.align 2");
@@ -158,6 +159,12 @@ void ProgramNode::EmitCode(LabelTracker& LT) {
 
     write("\n__error_outofbounds:\t\t# runtime error for out of bounds array access");
     write("\tla $a0, outofbounds\t\t# load the error string");
+    write("\tli $v0, 4    \t\t# load the print string service");
+    write("\tsyscall");
+    write("\tj __exit       \t\t# exit the program");
+
+    write("\n__error_nospace:\t\t# runtime error for malloc allocating wrong amount of space");
+    write("\tla $a0, nospace\t\t# load the error string");
     write("\tli $v0, 4    \t\t# load the print string service");
     write("\tsyscall");
     write("\tj __exit       \t\t# exit the program");
@@ -235,7 +242,6 @@ void begin_func(std::string name) {
 
 void end_func(std::string name) {
     write("\t### END OF FUNCTION \"%s\" ###", name.c_str());
-    // free all arrays declared in the function
     write("\tmove $sp, $fp\t\t# clear the stack of local variables");
     write("\tlw $ra, 4($fp)\t\t# fetch the $ra from the stack");
     write("\tlw $fp, 8($fp)\t\t# reset the $fp to the caller state");
@@ -634,13 +640,23 @@ void ArrayDeclNode::EmitCode(LabelTracker& LT) {
     // The pointer to the array is returned in $v0
     // The number of bytes allocated is returned in $v1
     write("\taddi $sp, $sp, -4\t# allocate space on the stack for '%s'", identifier->getLexeme().c_str());
+    write("\tli $t0, 0x0\t\t\t# load nullptr for array initialization");
+    write("\tlw $t0, 4($sp)\t\t# initialize array ptr to 0x0");
     int size = 4*(getType().size + 1);
     write("\tli, $a0, %d\t\t\t# request %d bytes from malloc", size, size);
     write("\tjal malloc");
     // TODO: add a runtime error for space not allocated.
+    write("\tli $t0, %d\t\t# load bytes that should be allocated", size + 20);
+    write("\tbne $a0, $t0, __error_nospace\t\t# compare requested bytes with allocated bytes");
     write("\tsw $v0, 4($sp)\t\t# store a pointer to the array on the stack");
     write("\tli $t0, %d\t\t\t# number of elements in array", getType().size);
     write("\tsw $t0, ($v0)\t\t# put the number of elements in the start of the array");
+    // TODO: Should array elements be manually initialized to zero?
+    // write("\tli $t0, 0\t\t\t# load zero for array element initialization");
+    // for(int i=0; i<getType().size; i++) {
+    //     write("\tsw $t0, %d($v0)\t\t# initialize element %d to zero", 4*(i + 1), i);
+    // }
+
     // now I store the pointer to the first element of the array in the stack
     // at the offset associated with this identifier in the local symbol table
     // allocate space in the stack for the array

@@ -1,0 +1,12 @@
+fn main() {
+    let mut x: i32;
+    let mut y: i32;
+    let mut z: i32;
+
+    x = read();
+    x = 5 * 1028;
+    y = x / 32;
+
+    print(x);
+    println(y);
+}

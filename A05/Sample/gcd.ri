@@ -1,0 +1,15 @@
+fn gcd(a: i32, b: i32) -> i32 {
+    if b == 0 {
+        return a;
+    } else {
+        return gcd(b, a % b);
+    }
+}
+
+fn main() {
+    let mut x: i32; 
+    let mut y: i32;
+    x = 24;
+    y = 36;
+    println(gcd(x, y));
+}

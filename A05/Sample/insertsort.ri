@@ -1,0 +1,33 @@
+// Array stuff
+
+fn insertion_sort(arr: [i32]) {
+    let mut i: i32;
+    let mut pos: i32;
+    let mut key: i32;
+
+    i = 1;
+
+    while i < arr.len {
+        pos = i;
+        key = arr[i];
+
+        while pos > 0 && arr[pos - 1] > key {
+            arr[pos] = arr[pos - 1];
+            pos -= 1;
+        }
+
+        arr[pos] = key;
+        i += 1;
+    }
+}
+
+fn main() {
+    let mut arr: [i32; 10];
+    arr = [ 8, 2, 3, 7, 19, 5, 6, 1, 2, 14 ];
+
+    println(arr); // Original array
+
+    insertion_sort(arr);
+
+    println(arr); // Sorted array
+}
