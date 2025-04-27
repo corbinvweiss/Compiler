@@ -153,6 +153,7 @@ class IdentifierNode: public LValueNode {
         std::string lexeme;
     public:
         IdentifierNode(std::string id, ErrorData err);
+        IdentifierNode(IdentifierNode& cp); 
         ~IdentifierNode();
         std::string getLexeme() override;
         TypeInfo getType() override;
@@ -379,6 +380,14 @@ class PrintStatementNode: public ASTNode {
         void setLocalST(SymbolTable* ST) override;
         bool TypeCheck() override;
         void EmitCode(LabelTracker&) override; // Emit code for print statement
+};
+
+class ReadNode: public ASTNode {
+    public:
+        ReadNode(ErrorData err);
+        ~ReadNode();
+        bool TypeCheck() override;
+        void EmitCode(LabelTracker&) override;
 };
 
 class LengthNode: public ASTNode {

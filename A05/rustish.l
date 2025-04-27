@@ -83,6 +83,8 @@ eol    \n
 
 "return"    { return RETURN; }
 
+"read"      { return READ; }
+
 "i32"       { return I32; }
 
 "bool"      { return BOOL;}
@@ -118,6 +120,10 @@ eol    \n
 ";"         { return SEMICOLON;}
 
 "="         { return ASSIGN;}
+
+"-="        { return MINUSASSIGN; }
+
+"+="        { return PLUSASSIGN; }
 
 \+          { return PLUS; } 
 

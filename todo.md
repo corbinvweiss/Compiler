@@ -17,6 +17,7 @@ but don't allow main to call anything that hasn't been defined.
 [ ] Add array assignment from other arrays
 [ ] Add array equality comparison
 [x] Free arrays at the end of functions
+[ ] add read function
 
 ## Someday
 
@@ -26,18 +27,5 @@ Return arrays from functions
 
 Should array elements all be manually initialized to zero? 
 
-in mutual_recurs.ri there is no way to typecheck the calls of the function that is defined later without a second pass over the AST.
-This means that something like this will not throw an error:
-
-```
-f() {
-    println(g());
-}
-
-main() {
-    f();
-}
-
-```
-This is kind of a big issue. I need to fix this.
+Add a read function
 

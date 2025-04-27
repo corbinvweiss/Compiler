@@ -1270,6 +1270,23 @@ void PrintStatementNode::EmitCode(LabelTracker& LT) {
     write("\t### End of printstatement ###");
 }
 
+ReadNode::ReadNode(ErrorData err)
+: ASTNode(err) {}
+
+bool ReadNode::TypeCheck() {
+    setType(Type::i32);
+    return true;
+}
+
+void ReadNode::EmitCode(LabelTracker& LT) {
+    write("\t### Read ###");
+    write("\tli $v0, 5\t\t\t# read integer service");
+    write("\tsyscall");
+    push("$v0");
+}
+
+ReadNode::~ReadNode() {}
+
 LengthNode::LengthNode(ASTNode* id, ErrorData err) 
 : ASTNode(err) {
     identifier = static_cast<IdentifierNode*>(id);
@@ -1461,7 +1478,11 @@ void BinaryNode::EmitCode(LabelTracker& LT) {
 
 
 IdentifierNode::IdentifierNode(std::string lexeme, ErrorData err)
-    : LValueNode(err), lexeme(lexeme) {}
+: LValueNode(err), lexeme(lexeme) {}
+
+    // copy constructor
+IdentifierNode::IdentifierNode(IdentifierNode& cp)
+: LValueNode(cp.err_data), lexeme(cp.lexeme) {}
 
 IdentifierNode::~IdentifierNode() {}
 

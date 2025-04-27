@@ -30,7 +30,7 @@ extern char *lineptr;
 %token MAIN LCURLY RCURLY IDENTIFIER SEMICOLON NUMBER ASSIGN PRINT COMMA
     PRINTLN LENGTH ARROW COLON FN I32 BOOL LET MUT FALSE TRUE LPAREN RPAREN 
     PLUS MINUS TIMES DIVIDE MODULUS AND OR NOT IF ELSE WHILE RETURN
-    LSQBRACK RSQBRACK NE EQ GT LT LE GE ERROR
+    LSQBRACK RSQBRACK NE EQ GT LT LE GE ERROR MINUSASSIGN PLUSASSIGN READ
 
 %left OR                   /* Lowest precedence */
 %left AND
@@ -129,6 +129,14 @@ statement       : identifier ASSIGN expression SEMICOLON {
                 | array_access ASSIGN expression SEMICOLON {
                     $$ = new AssignmentStatementNode($1, $3, ERRDATA);
                 }
+                | identifier MINUSASSIGN expression SEMICOLON {
+                    IdentifierNode* id = new IdentifierNode(static_cast<IdentifierNode&>(*$1));
+                    $$ = new AssignmentStatementNode($1, new BinaryNode("-", id, $3, ERRDATA), ERRDATA);
+                }
+                | identifier PLUSASSIGN expression SEMICOLON {
+                    IdentifierNode* id = new IdentifierNode(static_cast<IdentifierNode&>(*$1));
+                    $$ = new AssignmentStatementNode($1, new BinaryNode("+", id, $3, ERRDATA), ERRDATA);
+                }
                 | expression SEMICOLON {
                     $$ = $1;
                 }
@@ -204,6 +212,9 @@ expression      : func_call_expression {
                 }
                 | length {
                     $$ = $1;
+                }
+                | READ LPAREN RPAREN {
+                    $$ = new ReadNode(ERRDATA);
                 }
                 ;
 
