@@ -189,6 +189,9 @@ MainDefNode::~MainDefNode() {
 
 void MainDefNode::setGlobalST(SymbolTable* ST) {
     GlobalST = ST;
+    // add main to the symbol table
+    FunctionInfo* info = new FunctionInfo(Type::none, {});
+    GlobalST->insert("main", info);
     local_decl_list->setGlobalST(ST);
     stmt_list->setGlobalST(ST);
 }
@@ -200,9 +203,6 @@ void MainDefNode::setLocalST(SymbolTable* ST) {
 }
 
 bool MainDefNode::TypeCheck() {
-    // add main to the symbol table
-    FunctionInfo* info = new FunctionInfo(Type::none, {});
-    GlobalST->insert("main", info);
     bool decl_list_check = local_decl_list->TypeCheck();
     bool stmt_list_check = stmt_list->TypeCheck();
     if(decl_list_check && stmt_list_check) {
@@ -277,8 +277,18 @@ FuncDefNode::~FuncDefNode() {
     delete stmt_list;
 }
 
+/*
+    place the function in the global symbol table
+*/
 void FuncDefNode::setGlobalST(SymbolTable* ST) {
     GlobalST = ST;
+    std::string lexeme = identifier->getLexeme();
+    FunctionInfo* info = new FunctionInfo(getType(), params_list->getTypes());
+    int valid = GlobalST->insert(lexeme, info);
+    if(!valid) {
+        error(err_data, "function '" + lexeme + "' already defined");
+        exit(1);
+    }
     local_decl_list->setGlobalST(ST);
     stmt_list->setGlobalST(ST);
 }
@@ -292,19 +302,12 @@ void FuncDefNode::setLocalST(SymbolTable* ST) {
 
 
 bool FuncDefNode::TypeCheck() {
-    bool unique = true;
     std::string lexeme = identifier->getLexeme();
-    FunctionInfo* info = new FunctionInfo(getType(), params_list->getTypes());
-    int valid = GlobalST->insert(lexeme, info);
-    if(!valid) {
-        error(err_data, "function '" + lexeme + "' already defined");
-        unique = false;
-    }
     bool params_check = params_list->TypeCheck();   // put parameters in local ST
     bool decl_check = local_decl_list->TypeCheck();
     bool stmt_check = stmt_list->TypeCheck();
     bool return_check = CheckReturn();
-    if(unique && params_check && decl_check && stmt_check && return_check) {
+    if(params_check && decl_check && stmt_check && return_check) {
         std::cout << "--- " << lexeme << " ---\n";
         LocalST->show();
         std::cout << "----------\n";
@@ -962,14 +965,7 @@ bool CallNode::TypeCheck() {
     std::vector<TypeInfo> args = actual_args->argTypes();
     std::string lexeme = identifier->getLexeme();
     FunctionInfo* funcInfo = static_cast<FunctionInfo*>(GlobalST->lookup(lexeme));
-    // check if main has been defined
-    SymbolInfo* mainInfo = GlobalST->lookup("main");
     if(!funcInfo) { // the function is not defined
-        if(!mainInfo) {
-            // if the function is not found but we have not gotten to main yet
-            // then continue parsing because it's possible the function will still be defined later
-            return true;
-        }
         error(err_data, "undefined function '" + lexeme + "'");
         return false;
     }
