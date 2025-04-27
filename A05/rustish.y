@@ -154,6 +154,9 @@ statement       : identifier ASSIGN expression SEMICOLON {
                 | PRINTLN LPAREN actual_args RPAREN SEMICOLON {
                     $$ = new PrintStatementNode($3, true, ERRDATA);
                 }
+                | SEMICOLON {
+                    $$ = nullptr;
+                }
                 ;
 
 func_call_expression : identifier LPAREN actual_args RPAREN {

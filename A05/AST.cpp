@@ -200,6 +200,9 @@ void MainDefNode::setLocalST(SymbolTable* ST) {
 }
 
 bool MainDefNode::TypeCheck() {
+    // add main to the symbol table
+    FunctionInfo* info = new FunctionInfo(Type::none, {});
+    GlobalST->insert("main", info);
     bool decl_list_check = local_decl_list->TypeCheck();
     bool stmt_list_check = stmt_list->TypeCheck();
     if(decl_list_check && stmt_list_check) {
@@ -777,7 +780,7 @@ void StatementListNode::append(ASTNode* stmt) {
 bool StatementListNode::TypeCheck() {
     bool check = true;
     for(ASTNode* stmt : *stmt_list) {
-        if(!stmt->TypeCheck()) {
+        if(stmt && !stmt->TypeCheck()) {
             check = false;
         }
     }
@@ -787,14 +790,14 @@ bool StatementListNode::TypeCheck() {
 void StatementListNode::setGlobalST(SymbolTable* ST) {
     GlobalST = ST;
     for(ASTNode* stmt : *stmt_list) {
-        stmt->setGlobalST(ST);
+        if(stmt) stmt->setGlobalST(ST);
     }
 }
 
 void StatementListNode::setLocalST(SymbolTable* ST) {
     LocalST = ST;
     for(ASTNode* stmt : *stmt_list) {
-        stmt->setLocalST(ST);
+        if(stmt) stmt->setLocalST(ST);
     }
 }
 
@@ -802,9 +805,11 @@ void StatementListNode::setLocalST(SymbolTable* ST) {
 std::vector<ASTNode*> StatementListNode::FindReturns() {
     std::vector<ASTNode*> returns = {};
     for(ASTNode* stmt: *stmt_list) {
-        ASTNode* return_stmt = stmt->FindReturn();
-        if(return_stmt) {
-            returns.push_back(return_stmt);
+        if(stmt) {
+            ASTNode* return_stmt = stmt->FindReturn();
+            if(return_stmt) {
+                returns.push_back(return_stmt);
+            }
         }
     }
     return returns;
@@ -812,7 +817,7 @@ std::vector<ASTNode*> StatementListNode::FindReturns() {
 
 void StatementListNode::EmitCode(LabelTracker& LT) {
     for(ASTNode* stmt: *stmt_list) {
-        stmt->EmitCode(LT);
+        if(stmt) stmt->EmitCode(LT);
     }
 }
 
@@ -957,7 +962,14 @@ bool CallNode::TypeCheck() {
     std::vector<TypeInfo> args = actual_args->argTypes();
     std::string lexeme = identifier->getLexeme();
     FunctionInfo* funcInfo = static_cast<FunctionInfo*>(GlobalST->lookup(lexeme));
+    // check if main has been defined
+    SymbolInfo* mainInfo = GlobalST->lookup("main");
     if(!funcInfo) { // the function is not defined
+        if(!mainInfo) {
+            // if the function is not found but we have not gotten to main yet
+            // then continue parsing because it's possible the function will still be defined later
+            return true;
+        }
         error(err_data, "undefined function '" + lexeme + "'");
         return false;
     }

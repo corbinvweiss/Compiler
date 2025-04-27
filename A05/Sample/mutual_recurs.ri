@@ -10,6 +10,7 @@ fn g(n: i32) -> i32 {
         println(1, n);
         f(n - 1);
     } else {;}
+    return 0;
 }
 
 fn main() {
