@@ -87,7 +87,7 @@ class ASTNode {
         virtual void setGlobalST(SymbolTable* ST) {};
         virtual void setLocalST(SymbolTable* ST) {};
         virtual bool TypeCheck() { return true; };
-        virtual ASTNode* FindReturn() {return nullptr;}
+        virtual std::vector<ASTNode*> FindReturns() {return {};}
 
         virtual void setType(TypeInfo t) {
             _type = t;
@@ -234,7 +234,7 @@ class StatementListNode: public ASTNode {
         void append(ASTNode* stmt);
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
-        std::vector<ASTNode*> FindReturns();
+        std::vector<ASTNode*> FindReturns() override;
         void EmitCode(LabelTracker&) override; // Emit code for a list of statements
 };
 
@@ -308,7 +308,7 @@ class ReturnNode: public ASTNode {
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
         bool TypeCheck() override;
-        ASTNode* FindReturn() override;
+        std::vector<ASTNode*> FindReturns() override;
         void EmitCode(LabelTracker&) override; // Emit code for return statement
 };
 
@@ -353,6 +353,7 @@ class IfStatementNode: public ASTNode {
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
         bool TypeCheck() override;
+        std::vector<ASTNode*> FindReturns() override;
         void EmitCode(LabelTracker&) override; // Emit code for if statement
 };
 
@@ -366,6 +367,7 @@ class WhileStatementNode: public ASTNode {
         void setGlobalST(SymbolTable* ST) override;
         void setLocalST(SymbolTable* ST) override;
         bool TypeCheck() override;
+        std::vector<ASTNode*> FindReturns() override;
         void EmitCode(LabelTracker&) override; // Emit code for while statement
 };
 

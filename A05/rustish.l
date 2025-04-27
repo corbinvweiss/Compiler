@@ -99,7 +99,7 @@ eol    \n
 
 "println"   { return PRINTLN; }
 
-"length"    { return LENGTH; }
+".len"      { return LENGTH; }
 
 \{          { return LCURLY;}
 

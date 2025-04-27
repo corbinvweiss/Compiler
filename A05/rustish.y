@@ -240,8 +240,8 @@ group           : LPAREN expression RPAREN {
                     $$ = $2;
                 }
 
-length          : LENGTH LPAREN identifier RPAREN {
-                    $$ = new LengthNode($3, ERRDATA);
+length          : identifier LENGTH {
+                    $$ = new LengthNode($1, ERRDATA);
                 }
 
 binary          : expression PLUS expression {

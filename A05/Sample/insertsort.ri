@@ -10,7 +10,6 @@ fn insertion_sort(arr: [i32]) {
     while i < arr.len {
         pos = i;
         key = arr[i];
-
         while pos > 0 && arr[pos - 1] > key {
             arr[pos] = arr[pos - 1];
             pos -= 1;

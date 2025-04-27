@@ -397,8 +397,8 @@ bool ReturnNode::TypeCheck() {
     return true;
 }
 
-ASTNode* ReturnNode::FindReturn() {
-    return this;
+std::vector<ASTNode*> ReturnNode::FindReturns() {
+    return {this};
 }
 
 void ReturnNode::EmitCode(LabelTracker& LT) {
@@ -627,6 +627,10 @@ void ArrayDeclNode::setLocalST(SymbolTable* ST) {
 }
 
 bool ArrayDeclNode::TypeCheck() {
+    if(getType().size < 0) {
+        error(err_data, "cannot declare array with negative size");
+        return false;
+    }
     std::string lexeme = identifier->getLexeme();
     IdentifierInfo* info = new IdentifierInfo(getType(), true);
     int valid = LocalST->insert(lexeme, info);
@@ -809,10 +813,8 @@ std::vector<ASTNode*> StatementListNode::FindReturns() {
     std::vector<ASTNode*> returns = {};
     for(ASTNode* stmt: *stmt_list) {
         if(stmt) {
-            ASTNode* return_stmt = stmt->FindReturn();
-            if(return_stmt) {
-                returns.push_back(return_stmt);
-            }
+            std::vector<ASTNode*> return_stmts = stmt->FindReturns();
+            returns.insert(returns.end(), return_stmts.begin(), return_stmts.end());
         }
     }
     return returns;
@@ -1135,6 +1137,13 @@ bool IfStatementNode::TypeCheck() {
     return check;
 }
 
+std::vector<ASTNode*> IfStatementNode::FindReturns() {
+    std::vector<ASTNode*> if_returns = if_branch->FindReturns();
+    std::vector<ASTNode*> else_returns = else_branch->FindReturns();
+    if_returns.insert(if_returns.end(), else_returns.begin(), else_returns.end());
+    return if_returns;
+}
+
 void IfStatementNode::EmitCode(LabelTracker& LT) {
     write("\t### If Statement ###");
     expression->EmitCode(LT);
@@ -1188,6 +1197,10 @@ bool WhileStatementNode::TypeCheck() {
     return true;
 }
 
+std::vector<ASTNode*> WhileStatementNode::FindReturns() {
+    return body->FindReturns();
+}
+
 void WhileStatementNode::EmitCode(LabelTracker& LT) {
     write("\t### While Statement ###");
     LT.BeginWhileLabel();
@@ -1229,7 +1242,8 @@ bool PrintStatementNode::TypeCheck() {
     std::vector<TypeInfo> types = actual_args->argTypes();
     bool check = true;
     for(TypeInfo typeInfo : types) {
-        if(!(typeInfo.type == Type::i32 || typeInfo.type == Type::Bool)) {
+        if(!(typeInfo.type == Type::i32 || typeInfo.type == Type::Bool || 
+            typeInfo.type == Type::array_i32 || typeInfo.type == Type::array_bool)) {
             error(err_data, "cannot print type '" + typeToString(typeInfo) + "'");
             check = false;
         }
@@ -1254,6 +1268,43 @@ void PrintStatementNode::EmitCode(LabelTracker& LT) {
             pop("$a0");
             write("\tli $v0, 1 \t\t\t# print integer service");
             write("\tsyscall   \t\t\t# print the number");
+        }
+        else if(arg->getType().type == Type::array_bool) {
+            pop("$s0"); // get the address of the beginning of the array
+            write("\tli $t0, 1\t\t# i = 1");
+            write("\tlw $t1, ($s0)\t\t# n = arr.len");
+            LT.Label("_printarr");
+            write("\tbgt $t0, $t1 _endprintarr%d", LT.counter+1);
+            write("\tmul $t2, $t0, 4\t# offset = i * 4");
+            write("\tadd $t2, $t2, $s0\t\t# actual address in array");
+            write("\tlw $t3, ($t2)\t\t# load the element at index i");
+            write("\tla $a0, false   \t# load the 'false' message");
+            write("\tbeqz $t3, _printfalse%d   \t# don't load the 'true' message", LT.counter);
+            write("\tla $a0, true   \t# load the 'true' message");
+            LT.Label("_printfalse");
+            write("\tli $v0, 4      \t# print string service");
+            write("\tsyscall        \t# print the string");
+            write("\taddi $t0, $t0, 1\t\t# i++");
+            write("\tj _printarr%d", LT.counter-2);
+            LT.Label("_endprintarr");
+        }
+        else if(arg->getType().type == Type::array_i32) {
+            pop("$s0"); // get the address of the beginning of the array
+            write("\tli $t0, 1\t\t# i = 1");
+            write("\tlw $t1, ($s0)\t\t# n = arr.len");
+            LT.Label("_printarr");
+            write("\tbgt $t0, $t1 _endprintarr%d", LT.counter);
+            write("\tmul $t2, $t0, 4\t# offset = i * 4");
+            write("\tadd $t2, $t2, $s0\t\t# actual address in array");
+            write("\tlw $a0, ($t2)\t\t# load the element at index i");
+            write("\tli $v0, 1 \t\t\t# print integer service");
+            write("\tsyscall   \t\t\t# print the number");
+            write("\tli $a0, 0x20  \t\t# load a space");
+            write("\tli $v0, 11    \t\t# print character service");
+            write("\tsyscall       \t\t# print the space");
+            write("\taddi $t0, $t0, 1\t\t# i++");
+            write("\tj _printarr%d", LT.counter-1);
+            LT.Label("_endprintarr");
         }
         write("\tli $a0, 0x20  \t\t# load a space");
         write("\tli $v0, 11    \t\t# print character service");
@@ -1440,9 +1491,20 @@ void BinaryNode::EmitCode(LabelTracker& LT) {
     // left side goes in $s0, right side goes in $s1
     write("\t### Binary Node ###");
     left->EmitCode(LT);
+
+    // short circuit boolean evaluation:
+    pop("$s0"); // left operand
+    if(op == "&&") {
+        write("move $s2, $s0\t\t# copy $s0 into $s2");
+        write("beqz $s0, _shortcircuit%d", LT.counter);
+    }
+    if(op == "||") {
+        write("move $s2, $s0\t\t# copy $s0 into $s2");
+        write("bne $s0, $zero, _shortcircuit%d", LT.counter);
+    }
     right->EmitCode(LT);
     pop("$s1"); // right operand
-    pop("$s0"); // left operand
+    
     if(op == "+") {
         write("\tadd $s2, $s0, $s1\t# add the left and right sides");
     } else if(op == "-") {
@@ -1471,6 +1533,9 @@ void BinaryNode::EmitCode(LabelTracker& LT) {
         write("\tslt  $s2, $s0, $s1\t# less than");
     } else if(op == ">") {
         write("\tsgt  $s2, $s0, $s1\t# greater than");
+    }
+    if(op == "&&" || op == "||") {
+        LT.Label("_shortcircuit");
     }
     push("$s2");    // push the result onto the stack again.
     write("\t### end of Binary Node ###");

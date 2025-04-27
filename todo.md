@@ -27,5 +27,6 @@ Return arrays from functions
 
 Should array elements all be manually initialized to zero? 
 
-Add a read function
+Needs to find return statements even in an if/else or while statement
 
+Short circuit boolean evaluation
