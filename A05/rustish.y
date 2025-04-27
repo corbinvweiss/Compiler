@@ -11,11 +11,13 @@
 
 #define YYSTYPE ASTNode *
 #define YYERROR_VERBOSE 1
+#define ERRDATA ErrorData(lineptr, yylloc.first_line, yylloc.first_column)
 
 int yylex();
 int yyparse();
 void yyerror (char const *str);
 
+FILE *fdout; // global file descriptor for output MIPS code file
 extern FILE *yyin;
 extern char* yytext;
 extern char *lineptr;
@@ -26,9 +28,9 @@ extern char *lineptr;
 %define parse.error verbose
 
 %token MAIN LCURLY RCURLY IDENTIFIER SEMICOLON NUMBER ASSIGN PRINT COMMA
-    PRINTLN ARROW COLON FN I32 BOOL LET MUT FALSE TRUE LPAREN RPAREN 
+    PRINTLN LENGTH ARROW COLON FN I32 BOOL LET MUT FALSE TRUE LPAREN RPAREN 
     PLUS MINUS TIMES DIVIDE MODULUS AND OR NOT IF ELSE WHILE RETURN
-    LSQBRACK RSQBRACK NE EQ GT LT LE GE ERROR
+    LSQBRACK RSQBRACK NE EQ GT LT LE GE ERROR MINUSASSIGN PLUSASSIGN READ
 
 %left OR                   /* Lowest precedence */
 %left AND
@@ -49,7 +51,7 @@ input           : program {
                 ;
 
 program         : func_def_list main_def {
-                    $$ = new ProgramNode($1, $2);
+                    $$ = new ProgramNode($1, $2, fdout);
                 }
                 ;
 
@@ -60,21 +62,21 @@ func_def_list   : func_def_list func_def {
                 }
                 | /* epsilon */ {
                     // Create a new empty function definition list
-                    $$ = new FuncDefListNode(ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new FuncDefListNode(ERRDATA);
                 }
                 ;
 
 func_def        : FN identifier LPAREN params_list RPAREN ARROW type LCURLY local_decl_list statement_list RCURLY {
-                    $$ = new FuncDefNode($2, $4, $7, $9, $10, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new FuncDefNode($2, $4, $7, $9, $10, ERRDATA);
                 }
                 | FN identifier LPAREN params_list RPAREN LCURLY local_decl_list statement_list RCURLY {
-                    $$ = new FuncDefNode($2, $4, nullptr, $7, $8, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new FuncDefNode($2, $4, nullptr, $7, $8, ERRDATA);
                 }
                 | FN identifier LPAREN RPAREN ARROW type LCURLY local_decl_list statement_list RCURLY {
-                    $$ = new FuncDefNode($2, nullptr, $6, $8, $9, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new FuncDefNode($2, nullptr, $6, $8, $9, ERRDATA);
                 }
                 | FN identifier LPAREN RPAREN LCURLY local_decl_list statement_list RCURLY {
-                    $$ = new FuncDefNode($2, nullptr, nullptr, $6, $7, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new FuncDefNode($2, nullptr, nullptr, $6, $7, ERRDATA);
                 }
                 ;
 
@@ -84,12 +86,12 @@ params_list     : params_list COMMA var_decl {
                     $$ = $1;
                 } 
                 | var_decl {
-                    $$ = new ParamsListNode($1, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new ParamsListNode($1, ERRDATA);
                 }
                 ;
 
 main_def        : FN MAIN LPAREN RPAREN LCURLY local_decl_list statement_list RCURLY {
-                    $$ = new MainDefNode($6, $7, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new MainDefNode($6, $7, ERRDATA);
                 }
                 ;
 
@@ -100,15 +102,15 @@ local_decl_list : local_decl_list LET MUT var_decl SEMICOLON {
                 }
                 | /* epsilon */ {
                     // Create a new empty local declaration list
-                    $$ = new LocalDeclListNode(ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new LocalDeclListNode(ERRDATA);
                 }
                 ;
 
 var_decl        : identifier COLON type {
-                    $$ = new VarDeclNode($1, $3, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new VarDeclNode($1, $3, ERRDATA);
                 }
                 | identifier COLON LSQBRACK type SEMICOLON number RSQBRACK {
-                    $$ = new ArrayDeclNode($1, $4, $6, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new ArrayDeclNode($1, $4, $6, ERRDATA);
                 }
                 ;
 
@@ -117,56 +119,67 @@ statement_list  : statement_list statement {
                     $$ = $1;
                 }
                 | /* epsilon */ {
-                    $$ = new StatementListNode(ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new StatementListNode(ERRDATA);
                 }
                 ;
 
 statement       : identifier ASSIGN expression SEMICOLON {
-                    $$ = new AssignmentStatementNode($1, $3, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new AssignmentStatementNode($1, $3, ERRDATA);
                 }
                 | array_access ASSIGN expression SEMICOLON {
-                    $$ = new AssignmentStatementNode($1, $3, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new AssignmentStatementNode($1, $3, ERRDATA);
+                }
+                | identifier MINUSASSIGN expression SEMICOLON {
+                    IdentifierNode* id = new IdentifierNode(static_cast<IdentifierNode&>(*$1));
+                    $$ = new AssignmentStatementNode($1, new BinaryNode("-", id, $3, ERRDATA), ERRDATA);
+                }
+                | identifier PLUSASSIGN expression SEMICOLON {
+                    IdentifierNode* id = new IdentifierNode(static_cast<IdentifierNode&>(*$1));
+                    $$ = new AssignmentStatementNode($1, new BinaryNode("+", id, $3, ERRDATA), ERRDATA);
                 }
                 | expression SEMICOLON {
                     $$ = $1;
                 }
                 | RETURN expression SEMICOLON {
-                    $$ = new ReturnNode($2, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new ReturnNode($2, ERRDATA);
                 }
                 | RETURN SEMICOLON {
-                    $$ = new ReturnNode(ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new ReturnNode(ERRDATA);
                 }
                 | IF expression LCURLY statement_list RCURLY {
-                    $$ = new IfStatementNode($2, $4, nullptr, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new IfStatementNode($2, $4, nullptr, ERRDATA);
                 }
                 | IF expression LCURLY statement_list RCURLY 
                     ELSE LCURLY statement_list RCURLY {
-                    $$ = new IfStatementNode($2, $4, $8, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new IfStatementNode($2, $4, $8, ERRDATA);
                 }
                 | WHILE expression LCURLY statement_list RCURLY {
-                    $$ = new WhileStatementNode($2, $4, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new WhileStatementNode($2, $4, ERRDATA);
                 }
                 | PRINT LPAREN actual_args RPAREN SEMICOLON {
-                    $$ = new PrintStatementNode($3, false, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new PrintStatementNode($3, false, ERRDATA);
                 }
                 | PRINTLN LPAREN actual_args RPAREN SEMICOLON {
-                    $$ = new PrintStatementNode($3, true, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new PrintStatementNode($3, true, ERRDATA);
+                }
+                | SEMICOLON {
+                    $$ = nullptr;
                 }
                 ;
 
 func_call_expression : identifier LPAREN actual_args RPAREN {
-                    $$ = new CallNode($1, $3, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new CallNode($1, $3, ERRDATA);
                 }
 
 actual_args     : expression {
-                    $$ = new ActualArgsNode($1, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new ActualArgsNode($1, ERRDATA);
                 }
                 | actual_args COMMA expression {
                     static_cast<ActualArgsNode*>($1)->append($3);
                     $$ = $1;
                 }
                 | /* epsilon */ {
-                    $$ = new ActualArgsNode(ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new ActualArgsNode(ERRDATA);
                 }
                 ;
 
@@ -197,6 +210,12 @@ expression      : func_call_expression {
                 | group {
                     $$ = $1;
                 }
+                | length {
+                    $$ = $1;
+                }
+                | READ LPAREN RPAREN {
+                    $$ = new ReadNode(ERRDATA);
+                }
                 ;
 
 array_literal   : LSQBRACK expr_list RSQBRACK {
@@ -209,99 +228,103 @@ expr_list       : expr_list COMMA expression {
                     $$ = $1;
                 }
                 | expression {
-                    $$ = new ArrayLiteralNode($1, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new ArrayLiteralNode($1, ERRDATA);
                 }
                 ;
 
 array_access    : identifier LSQBRACK expression RSQBRACK {
-                    $$ = new ArrayAccessNode($1, $3, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new ArrayAccessNode($1, $3, ERRDATA);
                 }
 
 group           : LPAREN expression RPAREN {
                     $$ = $2;
                 }
 
+length          : identifier LENGTH {
+                    $$ = new LengthNode($1, ERRDATA);
+                }
+
 binary          : expression PLUS expression {
-                    $$ = new BinaryNode("+", $1, $3, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new BinaryNode("+", $1, $3, ERRDATA);
                 }
                 | expression MINUS expression {
-                    $$ = new BinaryNode("-", $1, $3, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new BinaryNode("-", $1, $3, ERRDATA);
                 }
                 | expression TIMES expression {
-                    $$ = new BinaryNode("*", $1, $3, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new BinaryNode("*", $1, $3, ERRDATA);
                 }
                 | expression DIVIDE expression {
-                    $$ = new BinaryNode("/", $1, $3, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new BinaryNode("/", $1, $3, ERRDATA);
                 }
                 | expression MODULUS expression {
-                    $$ = new BinaryNode("%", $1, $3, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new BinaryNode("%", $1, $3, ERRDATA);
                 }
                 | expression AND expression {
-                    $$ = new BinaryNode("&&", $1, $3, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new BinaryNode("&&", $1, $3, ERRDATA);
                 }
                 | expression OR expression {
-                    $$ = new BinaryNode("||", $1, $3, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new BinaryNode("||", $1, $3, ERRDATA);
                 }
                 | expression EQ expression {
-                    $$ = new BinaryNode("==", $1, $3, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new BinaryNode("==", $1, $3, ERRDATA);
                 }
                 | expression NE expression {
-                    $$ = new BinaryNode("!=", $1, $3, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new BinaryNode("!=", $1, $3, ERRDATA);
                 }
                 | expression LE expression {
-                    $$ = new BinaryNode("<=", $1, $3, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new BinaryNode("<=", $1, $3, ERRDATA);
                 }
                 | expression GE expression {
-                    $$ = new BinaryNode(">=", $1, $3, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new BinaryNode(">=", $1, $3, ERRDATA);
                 }
                 | expression GT expression {
-                    $$ = new BinaryNode(">", $1, $3, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new BinaryNode(">", $1, $3, ERRDATA);
                 }
                 | expression LT expression {
-                    $$ = new BinaryNode("<", $1, $3, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new BinaryNode("<", $1, $3, ERRDATA);
                 }
 
                 ;
 unary           : MINUS expression {
-                    $$ = new UnaryNode("-", $2, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new UnaryNode("-", $2, ERRDATA);
                 }
                 | PLUS expression {
-                    $$ = new UnaryNode("+", $2, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new UnaryNode("+", $2, ERRDATA);
                 }
                 | NOT expression {
-                    $$ = new UnaryNode("!", $2, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new UnaryNode("!", $2, ERRDATA);
                 }
                 ;
 
 identifier      : IDENTIFIER {
-                    $$ = new IdentifierNode(yytext, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new IdentifierNode(yytext, ERRDATA);
                 }
                 ;
 
 type            : I32 {
-                    $$ = new TypeNode(Type::i32, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new TypeNode(Type::i32, ERRDATA);
                 }
                 | BOOL {
-                    $$ = new TypeNode(Type::Bool, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new TypeNode(Type::Bool, ERRDATA);
                 }
                 | LSQBRACK I32 RSQBRACK {
-                    $$ = new TypeNode(Type::array_i32, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new TypeNode(Type::array_i32, ERRDATA);
                 }
                 | LSQBRACK BOOL RSQBRACK {
-                    $$ = new TypeNode(Type::array_bool, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new TypeNode(Type::array_bool, ERRDATA);
                 }
                 ;
 
 number          : NUMBER {
-                    $$ = new NumberNode(atoi(yytext), ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new NumberNode(atoi(yytext), ERRDATA);
                 }
                 ;
 
 bool            : TRUE {
-                    $$ = new BoolNode(true, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new BoolNode(true, ERRDATA);
                 }
                 | FALSE {
-                    $$ = new BoolNode(false, ErrorData(lineptr, yylloc.first_line, yylloc.first_column));
+                    $$ = new BoolNode(false, ERRDATA);
                 }
                 ;
 
@@ -319,6 +342,8 @@ int main(int argc, char **argv) {
         perror("Error opening file");
         return 1;
     }
+
+    fdout = fopen("a.s", "w");
 
     yyparse();  // Call the Bison parser
 

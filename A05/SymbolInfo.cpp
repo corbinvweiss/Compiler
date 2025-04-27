@@ -62,18 +62,17 @@ SymbolInfo::SymbolInfo(TypeInfo t)
 TypeInfo SymbolInfo::getReturnType() {
     return return_type;
 }
+SymbolInfo::SymbolInfo(TypeInfo t, bool local)
+: return_type(t), local(local) {}
 
 // **************************
-
-IdentifierInfo::IdentifierInfo(TypeInfo t)
-: SymbolInfo(t) {}
 
 std::string IdentifierInfo::show() {
     std::string init = "undefined";
     if(initialized) {
         init = "initialized";
     }
-    return typeToString(getReturnType()) + " = " + init;
+    return typeToString(getReturnType()) + " : " + std::to_string(GetOffset());
 }
 
 // **************************

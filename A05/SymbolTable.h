@@ -8,7 +8,7 @@
 
 #include <map>
 #include <string>
-#include <variant>
+#include <vector>
 #include "SymbolInfo.h"
 
 
@@ -40,6 +40,10 @@ class SymbolTable {
             Displays the map in a human-readable format
         */
         void show();
+        /*
+            Return all SymbolInfo entries with the given type. Used for freeing arrays
+        */
+        std::vector<SymbolInfo*> FindLocalArrays();
 };
 
 #endif // SYMBOLTABLE_H

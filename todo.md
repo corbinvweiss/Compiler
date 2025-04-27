@@ -1,55 +1,32 @@
-# Type Checking
+# Code Generation
+Look [here](https://www.cs.southern.edu/halterman/Courses/Winter2025/415/Assignments/codegen.html) for the assignment.
 
-The following should cause errors:
-- [x] Assignment of wrong type to a declared variable
-- [x] Using an undeclared variable (rvalue)
-- [x] Assigning to an undeclared (lvalue)
-- [x] Use of an uninitialized variable
-- [x] Attempt to call an undefined function
-- [x] Passing wrong types of actual arguments to function call
-- [x] Passing wrong number of arguments to function call
-- [x] Returning wrong type from function call (also returning something from a "void" function)
-- [x] Missing return from function declared to return i32 or bool
-- [x] Mixed arithmetic (i32/bool)
-- [x] Arithmetic with bools
-- [x] Logical comparison with i32s
-- [x] Missing main function
-- [x] Missing let, mut, etc
-- [ ] Non-i32 array indices
-- [x] Duplicate function names
-- [x] Duplicate local variables
-- [ ] Non-Boolean expression in an if or while statement
-- [x] Variable declaration after executable code within a function definition
-- [x] Using a "void" function as an rvalue 
-- [ ] 
+[x] print literals.
+[x] local variables and expressions.
+[x] loops and conditionals
+[x] functions
+[x] arrays
 
 ---
-Bugs:
-- line numbers for if condition errors point to end of if else statement
----
-Next:
-- unary operators
-- arrays
+allow functions to call other functions that haven't been defined yet
+but don't allow main to call anything that hasn't been defined.
 
----
+[x] array pointer initialized to
+[x] Add a length(array) to access array length
+[x] Add array literals
+[ ] Add array assignment from other arrays
+[ ] Add array equality comparison
+[x] Free arrays at the end of functions
+[ ] add read function
 
-Questions:
-- What do we do when we have multiple types of errors for the same line? just report them all?
+## Someday
 
-## Function type checking
-```
-fn f(a: i32, b: bool, c: bool) -> bool {
-    return true;
-}
+Return arrays from functions
 
-fn main() {
-    f(1, 3, 5);
-}
---------
-Error [line 5]: Bad argument types. f expects (i32, bool, bool), but got (i32, i32, i32). 
-```
+## Questions:
 
+Should array elements all be manually initialized to zero? 
 
-## Next Steps
-- Remove type nodes once they have been put in the Symbol Table
-- implement TypeError as a class that inherits from std::runtime_error
+Needs to find return statements even in an if/else or while statement
+
+Short circuit boolean evaluation

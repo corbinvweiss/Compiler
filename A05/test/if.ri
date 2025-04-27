@@ -1,0 +1,17 @@
+fn main() {
+    let mut a: i32;
+    let mut b: i32;
+    a = 5;
+    b = 2;
+    if a < 10 {
+        println(a);
+        if a < b {
+            println(true);
+        }
+        else {
+            println(false);
+        }
+    } else {
+        println(a - 10);
+    }
+}

@@ -18,6 +18,7 @@ int SymbolTable::insert(std::string lexeme, SymbolInfo* info) {
         return 0;
     }
     if(this->symbols.find(lexeme) == this->symbols.end()) {
+        info->SetOffset(-4*(size())); // point to where the symbol is stored on the stack relative to $fp
         this->symbols[lexeme] = info;
         return 1;
     }
@@ -41,7 +42,19 @@ int SymbolTable::size() {
 
 void SymbolTable::show() {
     for(auto it = this->symbols.begin(); it != this->symbols.end(); ++it){
-        std::cout << it->first << ": " << it->second->show() + ", ";
+        std::cout << it->first << ": " << it->second->show() + "\n";
     }
-    std::cout << "\n";
+}
+
+std::vector<SymbolInfo*> SymbolTable::FindLocalArrays() {
+    std::vector<SymbolInfo*> result = {};
+    for(auto it = this->symbols.begin(); it != this->symbols.end(); ++it){
+        Type t = it->second->getReturnType().type;
+        if(t == Type::array_bool || t == Type::array_i32) {
+            if(it->second->IsLocal()) {
+                result.push_back(it->second);
+            }
+        }
+    }
+    return result;
 }

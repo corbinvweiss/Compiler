@@ -1,0 +1,11 @@
+fn f() {
+    g();
+}
+
+fn g(a: i32) {
+    println(a);
+}
+
+fn main() {
+    f();
+}

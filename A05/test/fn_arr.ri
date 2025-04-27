@@ -1,0 +1,32 @@
+fn printarray(a: [i32]) {
+    let mut i: i32;
+    i = 0;
+    while i < length(a) {
+        print(a[i]);
+        i = i + 1;
+    }
+    println();
+}
+
+fn sum(a: [i32]) -> i32 {
+    let mut s: i32;
+    let mut i: i32;
+    i = 0;
+    s = 0;
+    while i < length(a) {
+        s = s + a[i];
+        a[i] = a[i] * 2;
+        i = i + 1;
+    }
+    return s;
+}
+
+fn main() {
+    let mut a: [i32; 3];
+    a[0] = 1;
+    a[1] = 2;
+    a[2] = 3;
+    printarray(a);
+    println(sum(a));
+    printarray(a);
+}

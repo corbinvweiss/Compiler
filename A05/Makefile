@@ -33,5 +33,5 @@ lex.yy.cpp: rustish.l rustish.tab.hpp
 
 clean:
 	/bin/rm -f *.o *.yy.c *.yy.cpp *.tab.cpp *.tab.c *.tab.hpp \
-	           core *.output *.temp *~ rustish 
+	           core *.output *.temp *~ rustish a.s
 
