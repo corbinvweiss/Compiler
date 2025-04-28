@@ -1065,8 +1065,6 @@ void ArrayAccessNode::Access(LabelTracker& LT) {
     // check for out of bounds access
     write("\tbge $s0, $t1, __error_outofbounds\t# out of bounds array access");
     write("\tblt $s0, $zero, __error_outofbounds\t# negative array index error");
-    // todo: check for negative indices
-
     write("\taddi $t2, $s0, 1\t# add 1 to the index for the irrelavent first element");
     write("\tsll $t2, $t2, 2\t\t# multiply $t2 by 4 to get byte size");
     write("\tadd $t2, $t2, $t0\t# add the offset ($t2) to the beginning of the array ($t0)");
@@ -1492,52 +1490,54 @@ void BinaryNode::EmitCode(LabelTracker& LT) {
     write("\t### Binary Node ###");
     left->EmitCode(LT);
 
+    
     // short circuit boolean evaluation:
-    pop("$s0"); // left operand
+    pop("$t0"); // left operand
     if(op == "&&") {
-        write("move $s2, $s0\t\t# copy $s0 into $s2");
-        write("beqz $s0, _shortcircuit%d", LT.counter);
+        write("beqz $t0, _shortcircuit%d", LT.counter);
     }
     if(op == "||") {
-        write("move $s2, $s0\t\t# copy $s0 into $s2");
-        write("bne $s0, $zero, _shortcircuit%d", LT.counter);
+        write("bne $t0, $zero, _shortcircuit%d", LT.counter);
     }
+    // I have a problem here. I need to back up the $t0 register before I call right's emit code
+    push("$t0");
     right->EmitCode(LT);
-    pop("$s1"); // right operand
+    pop("$t1"); // right operand
+    pop("$t0");
     
     if(op == "+") {
-        write("\tadd $s2, $s0, $s1\t# add the left and right sides");
+        write("\tadd $t2, $t0, $t1\t# add the left and right sides");
     } else if(op == "-") {
-        write("\tsub $s2, $s0, $s1\t# subtract the left and right sides");
+        write("\tsub $t2, $t0, $t1\t# subtract the left and right sides");
     } else if(op == "*") {
-        write("\tmul $s2, $s0, $s1\t# multiply the left and right sides");
+        write("\tmul $t2, $t0, $t1\t# multiply the left and right sides");
     } else if(op == "/") {
         write("\tbeqz $s1, __error_div0\t# jump to the division by zero runtime error");
-        write("\tdiv $s2, $s0, $s1\t# divide the left and right sides");
+        write("\tdiv $t2, $t0, $t1\t# divide the left and right sides");
     } else if(op == "%") {
         write("\tbeqz $s1, __error_div0\t# jump to the division by zero runtime error");
-        write("\trem $s2, $s0, $s1\t# get the remainder from dividing $t0 by $t1");
+        write("\trem $t2, $t0, $t1\t# get the remainder from dividing $t0 by $t1");
     } else if(op == "&&") {
-        write("\tand $s2, $s0, $s1\t# and left and right side");
+        write("\tand $t2, $t0, $t1\t# and left and right side");
     } else if(op == "||") {
-        write("\tor  $s2, $t0, $t1\t# or left and right side");
+        write("\tor  $t2, $t0, $t1\t# or left and right side");
     } else if(op == "==") {
-        write("\tseq  $s2, $s0, $s1\t# equal");
+        write("\tseq  $t2, $t0, $t1\t# equal");
     } else if(op == "!=") {
-        write("\tsne  $s2, $s0, $s1\t# not equal");
+        write("\tsne  $t2, $t0, $t1\t# not equal");
     } else if(op == "<=") {
-        write("\tsle  $s2, $s0, $s1\t# less than or equal");
+        write("\tsle  $t2, $t0, $t1\t# less than or equal");
     } else if(op == ">=") {
-        write("\tsge  $s2, $s0, $s1\t# greater or equal");
+        write("\tsge  $t2, $t0, $t1\t# greater or equal");
     } else if(op == "<") {
-        write("\tslt  $s2, $s0, $s1\t# less than");
+        write("\tslt  $t2, $t0, $t1\t# less than");
     } else if(op == ">") {
-        write("\tsgt  $s2, $s0, $s1\t# greater than");
+        write("\tsgt  $t2, $t0, $t1\t# greater than");
     }
     if(op == "&&" || op == "||") {
         LT.Label("_shortcircuit");
     }
-    push("$s2");    // push the result onto the stack again.
+    push("$t2");    // push the result onto the stack again.
     write("\t### end of Binary Node ###");
 }
 
