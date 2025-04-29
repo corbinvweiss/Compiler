@@ -87,6 +87,8 @@ eol    \n
 
 "char"      { return CHARTYPE; }
 
+"str"       { return STRINGTYPE; }
+
 "i32"       { return I32; }
 
 "bool"      { return BOOL;}
@@ -157,7 +159,8 @@ eol    \n
 
 "->"        { return ARROW; }
 
-'[^']'      { return CHAR; }
+'[^'^\\]'   { return CHAR; }
+\"([^\"\\]|\\.)*\"  { return STRING; }
 
 [A-Za-z_][0-9A-Za-z_]* { /* identifier */
                 

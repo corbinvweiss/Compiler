@@ -26,6 +26,7 @@ enum Type {
     i32,
     Bool,
     Char,
+    Str,
     array_i32,
     array_bool,
     none,

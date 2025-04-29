@@ -1,5 +1,5 @@
 fn main() {
     let mut a: char;
-    a = 'a';
+    a = '4';
     print(a, 'b', 'c');
 }

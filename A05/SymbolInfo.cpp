@@ -13,6 +13,7 @@ const char* typeNames[] = {
     "i32",
     "bool",
     "char",
+    "str",
     "[i32",
     "[bool",
     "none",
@@ -20,7 +21,7 @@ const char* typeNames[] = {
 };
 
 std::string typeToString(TypeInfo t) {
-    if (t.type >= Type::i32 && t.type <= Type::Char) {
+    if (t.type >= Type::i32 && t.type <= Type::Str) {
         return typeNames[static_cast<int>(t.type)];
     }
     else if(t.type >= Type::array_i32 && t.type <= Type::array_bool) {

@@ -1,0 +1,10 @@
+fn main() {
+    let mut s: str;
+    let mut hello: str;
+    s = "test";
+    println(s);
+    s[0] = 'l';
+    println(s);
+    hello = "hello";
+    println(hello, "world!");
+}
