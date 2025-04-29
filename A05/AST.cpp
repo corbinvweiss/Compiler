@@ -1240,8 +1240,10 @@ bool PrintStatementNode::TypeCheck() {
     std::vector<TypeInfo> types = actual_args->argTypes();
     bool check = true;
     for(TypeInfo typeInfo : types) {
-        if(!(typeInfo.type == Type::i32 || typeInfo.type == Type::Bool || 
-            typeInfo.type == Type::array_i32 || typeInfo.type == Type::array_bool)) {
+        Type type = typeInfo.type;
+        if(!(type == Type::i32 || type == Type::Bool || 
+            type == Type::array_i32 || type == Type::array_bool ||
+            type == Type::Char)) {
             error(err_data, "cannot print type '" + typeToString(typeInfo) + "'");
             check = false;
         }
@@ -1252,8 +1254,9 @@ bool PrintStatementNode::TypeCheck() {
 void PrintStatementNode::EmitCode(LabelTracker& LT) {
     write("\n\t### PrintStatement ###");
     for(ASTNode* arg : *(actual_args->getArgs())) {
+        Type type = arg->getType().type;
         arg->EmitCode(LT);
-        if(arg->getType().type == Type::Bool) {
+        if(type == Type::Bool) {
             pop("$t0");     // get the result of the expression off of the stack
             write("\tla $a0, false   \t# load the 'false' message");
             write("\tbeqz $t0, _printfalse%d   \t# don't load the 'true' message", LT.counter);
@@ -1262,12 +1265,17 @@ void PrintStatementNode::EmitCode(LabelTracker& LT) {
             write("\tli $v0, 4      \t# print string service");
             write("\tsyscall        \t# print the string");
         }
-        else if(arg->getType().type == Type::i32) {
+        else if(type == Type::i32) {
             pop("$a0");
             write("\tli $v0, 1 \t\t\t# print integer service");
             write("\tsyscall   \t\t\t# print the number");
         }
-        else if(arg->getType().type == Type::array_bool) {
+        else if(type == Type::Char) {
+            pop("$a0");
+            write("\tli $v0, 11    \t\t# print character service");
+            write("\tsyscall       \t\t# print the character");
+        }
+        else if(type == Type::array_bool) {
             pop("$s0"); // get the address of the beginning of the array
             write("\tli $t0, 1\t\t# i = 1");
             write("\tlw $t1, ($s0)\t\t# n = arr.len");
@@ -1286,7 +1294,7 @@ void PrintStatementNode::EmitCode(LabelTracker& LT) {
             write("\tj _printarr%d", LT.counter-2);
             LT.Label("_endprintarr");
         }
-        else if(arg->getType().type == Type::array_i32) {
+        else if(type == Type::array_i32) {
             pop("$s0"); // get the address of the beginning of the array
             write("\tli $t0, 1\t\t# i = 1");
             write("\tlw $t1, ($s0)\t\t# n = arr.len");
@@ -1661,5 +1669,23 @@ void BoolNode::EmitCode(LabelTracker& LT) {
     else {
         write("\tli, $t0, 0\t\t\t# loading 'false'");
     }
+    push("$t0");
+}
+
+CharNode::CharNode(std::string val, ErrorData err)
+: ASTNode(err)
+{
+    setType(Type::Char);
+    value = val[1];
+    std::cout << "val = " << val[1] << "\n";
+}
+
+CharNode::~CharNode() {}
+char CharNode::getValue() {
+    return value;
+}
+void CharNode::EmitCode(LabelTracker& LT) {
+    write("\t### CharNode ###");
+    write("\tli, $t0, '%c'\t\t\t# loading character", value);
     push("$t0");
 }

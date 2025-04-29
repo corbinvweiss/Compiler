@@ -118,6 +118,16 @@ class BoolNode: public ASTNode {
         void EmitCode(LabelTracker&) override; // Emit code for a boolean literal
 };
 
+class CharNode: public ASTNode {
+    private:
+        char value;
+    public:
+        CharNode(std::string val, ErrorData err);
+        ~CharNode();
+        char getValue();
+        void EmitCode(LabelTracker&) override;
+};
+
 class TypeNode: public ASTNode {
     public:
         TypeNode(TypeInfo t, ErrorData err);

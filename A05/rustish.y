@@ -31,6 +31,7 @@ extern char *lineptr;
     PRINTLN LENGTH ARROW COLON FN I32 BOOL LET MUT FALSE TRUE LPAREN RPAREN 
     PLUS MINUS TIMES DIVIDE MODULUS AND OR NOT IF ELSE WHILE RETURN
     LSQBRACK RSQBRACK NE EQ GT LT LE GE ERROR MINUSASSIGN PLUSASSIGN READ
+    SINGLEQUOTE CHAR CHARTYPE
 
 %left OR                   /* Lowest precedence */
 %left AND
@@ -195,6 +196,9 @@ expression      : func_call_expression {
                 | bool {
                     $$ = $1;
                 }
+                | char {
+                    $$ = $1;
+                }
                 | array_literal {
                     $$ = $1;
                 }
@@ -307,6 +311,9 @@ type            : I32 {
                 | BOOL {
                     $$ = new TypeNode(Type::Bool, ERRDATA);
                 }
+                | CHARTYPE {
+                    $$ = new TypeNode(Type::Char, ERRDATA);
+                }
                 | LSQBRACK I32 RSQBRACK {
                     $$ = new TypeNode(Type::array_i32, ERRDATA);
                 }
@@ -327,6 +334,10 @@ bool            : TRUE {
                     $$ = new BoolNode(false, ERRDATA);
                 }
                 ;
+
+char            : CHAR {
+                    $$ = new CharNode(yytext, ERRDATA);
+                }
 
 %%
 

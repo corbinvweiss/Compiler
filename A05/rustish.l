@@ -85,6 +85,8 @@ eol    \n
 
 "read"      { return READ; }
 
+"char"      { return CHARTYPE; }
+
 "i32"       { return I32; }
 
 "bool"      { return BOOL;}
@@ -154,6 +156,8 @@ eol    \n
 ">="        { return GE; }
 
 "->"        { return ARROW; }
+
+'[^']'      { return CHAR; }
 
 [A-Za-z_][0-9A-Za-z_]* { /* identifier */
                 

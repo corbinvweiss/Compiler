@@ -12,6 +12,7 @@ Implement the SymbolInfo, IdentifierInfo and FunctionInfo classes
 const char* typeNames[] = {
     "i32",
     "bool",
+    "char",
     "[i32",
     "[bool",
     "none",
@@ -19,7 +20,7 @@ const char* typeNames[] = {
 };
 
 std::string typeToString(TypeInfo t) {
-    if (t.type >= Type::i32 && t.type <= Type::Bool) {
+    if (t.type >= Type::i32 && t.type <= Type::Char) {
         return typeNames[static_cast<int>(t.type)];
     }
     else if(t.type >= Type::array_i32 && t.type <= Type::array_bool) {

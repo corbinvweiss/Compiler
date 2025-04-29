@@ -25,6 +25,7 @@ enum TypeError {
 enum Type {
     i32,
     Bool,
+    Char,
     array_i32,
     array_bool,
     none,

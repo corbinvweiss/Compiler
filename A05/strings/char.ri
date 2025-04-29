@@ -1,0 +1,5 @@
+fn main() {
+    let mut a: char;
+    a = 'a';
+    print(a, 'b', 'c');
+}
