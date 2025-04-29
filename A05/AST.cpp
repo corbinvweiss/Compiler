@@ -687,20 +687,6 @@ void ArrayLiteralNode::append(ASTNode* expression) {
     expressions->push_back(expression);
 } 
 
-void ArrayLiteralNode::setGlobalST(SymbolTable* ST) {
-    GlobalST = ST;
-    for(ASTNode* expr : *expressions) {
-        expr->setGlobalST(ST);
-    }
-}
-
-void ArrayLiteralNode::setLocalST(SymbolTable* ST) {
-    LocalST = ST;
-    for(ASTNode* expr : *expressions) {
-        expr->setLocalST(ST);
-    }
-}
-
 bool ArrayLiteralNode::TypeCheck() {
     bool check = true;
     for(ASTNode* expr : *expressions) {
@@ -754,7 +740,6 @@ void ArrayLiteralNode::EmitCode(LabelTracker& LT) {
     int size = 4*(getType().size + 1);
     write("\tli, $a0, %d\t\t# request %d bytes from malloc", size, size);
     write("\tjal malloc");
-    // TODO: add a runtime error for space not allocated.
     write("\tli $t0, %d\t# size of array", getType().size);
     write("\tsw $t0, ($v0)\t# put the number of elements in the start of the array");
     // put the values into the array
@@ -847,7 +832,7 @@ bool AssignmentStatementNode::TypeCheck() {
     TypeInfo rtype = expression->getType();
     TypeInfo ltype = identifier->getType();
     if(!(ltype.type == rtype.type && ltype.size == rtype.size)) {
-        error(err_data, "cannot assign '" + typeToString(rtype) + "' to type '" + typeToString(ltype) + "'");
+        error(err_data, "cannot assign '" + typeToString(ltype) + "' to type '" + typeToString(rtype) + "'");
         return false;
     }
     else {
@@ -1032,6 +1017,7 @@ TypeInfo ArrayAccessNode::getType() {
     TypeInfo tinfo = info->getReturnType();
     if(tinfo.type == Type::array_bool) return Type::Bool;
     if(tinfo.type == Type::array_i32) return Type::i32;
+    if(tinfo.type == Type::Str) return Type::Char;
     else return Type::none;
 }
 
@@ -1137,8 +1123,10 @@ bool IfStatementNode::TypeCheck() {
 
 std::vector<ASTNode*> IfStatementNode::FindReturns() {
     std::vector<ASTNode*> if_returns = if_branch->FindReturns();
-    std::vector<ASTNode*> else_returns = else_branch->FindReturns();
-    if_returns.insert(if_returns.end(), else_returns.begin(), else_returns.end());
+    if(else_branch) {
+        std::vector<ASTNode*> else_returns = else_branch->FindReturns();
+        if_returns.insert(if_returns.end(), else_returns.begin(), else_returns.end());
+    }
     return if_returns;
 }
 
@@ -1240,8 +1228,10 @@ bool PrintStatementNode::TypeCheck() {
     std::vector<TypeInfo> types = actual_args->argTypes();
     bool check = true;
     for(TypeInfo typeInfo : types) {
-        if(!(typeInfo.type == Type::i32 || typeInfo.type == Type::Bool || 
-            typeInfo.type == Type::array_i32 || typeInfo.type == Type::array_bool)) {
+        Type type = typeInfo.type;
+        if(!(type == Type::i32 || type == Type::Bool || 
+            type == Type::array_i32 || type == Type::array_bool ||
+            type == Type::Char || type == Type::Str)) {
             error(err_data, "cannot print type '" + typeToString(typeInfo) + "'");
             check = false;
         }
@@ -1249,11 +1239,57 @@ bool PrintStatementNode::TypeCheck() {
     return check;
 }
 
+void PrintArray(Type type, LabelTracker& LT) {
+    pop("$s0"); // get the address of the beginning of the array
+    write("\tli $t0, 1\t\t# i = 1");
+    write("\tlw $t1, ($s0)\t\t# n = arr.len");
+    LT.Label("_printarr");
+    if(type == Type::array_bool) {
+        write("\tbgt $t0, $t1 _endprintarr%d", LT.counter+1);
+    }
+    else if(type == Type::array_i32 || type == Type::Str) {
+        write("\tbgt $t0, $t1 _endprintarr%d", LT.counter);
+    }
+    write("\tmul $t2, $t0, 4\t# offset = i * 4");
+    write("\tadd $t2, $t2, $s0\t\t# actual address in array");
+    write("\tlw $a0, ($t2)\t\t# load the element at index i");
+    if(type == Type::array_bool) {
+        write("\tla $a0, false   \t# load the 'false' message");
+        write("\tbeqz $t3, _printfalse%d   \t# don't load the 'true' message", LT.counter);
+        write("\tla $a0, true   \t# load the 'true' message");
+        LT.Label("_printfalse");
+        write("\tli $v0, 4      \t# print string service");
+        write("\tsyscall        \t# print the string");
+    }
+    else if(type == Type::array_i32) {
+        write("\tli $v0, 1 \t\t\t# print integer service");
+        write("\tsyscall   \t\t\t# print the number");
+    }
+    else if(type == Type::Str) {
+        write("\tli $v0, 11 \t\t\t# print character service");
+        write("\tsyscall   \t\t\t# print the character");
+    }
+    if(type != Type::Str) {
+        write("\tli $a0, 0x20  \t\t# load a space");
+        write("\tli $v0, 11    \t\t# print character service");
+        write("\tsyscall       \t\t# print the space");
+    }
+    write("\taddi $t0, $t0, 1\t\t# i++");
+    if(type == Type::array_bool) {
+        write("\tj _printarr%d", LT.counter-2);
+    }
+    else if(type == Type::array_i32 || type == Type::Str) {
+        write("\tj _printarr%d", LT.counter-1);
+    }
+    LT.Label("_endprintarr");
+}
+
 void PrintStatementNode::EmitCode(LabelTracker& LT) {
     write("\n\t### PrintStatement ###");
     for(ASTNode* arg : *(actual_args->getArgs())) {
+        Type type = arg->getType().type;
         arg->EmitCode(LT);
-        if(arg->getType().type == Type::Bool) {
+        if(type == Type::Bool) {
             pop("$t0");     // get the result of the expression off of the stack
             write("\tla $a0, false   \t# load the 'false' message");
             write("\tbeqz $t0, _printfalse%d   \t# don't load the 'true' message", LT.counter);
@@ -1262,47 +1298,18 @@ void PrintStatementNode::EmitCode(LabelTracker& LT) {
             write("\tli $v0, 4      \t# print string service");
             write("\tsyscall        \t# print the string");
         }
-        else if(arg->getType().type == Type::i32) {
+        else if(type == Type::i32) {
             pop("$a0");
             write("\tli $v0, 1 \t\t\t# print integer service");
             write("\tsyscall   \t\t\t# print the number");
         }
-        else if(arg->getType().type == Type::array_bool) {
-            pop("$s0"); // get the address of the beginning of the array
-            write("\tli $t0, 1\t\t# i = 1");
-            write("\tlw $t1, ($s0)\t\t# n = arr.len");
-            LT.Label("_printarr");
-            write("\tbgt $t0, $t1 _endprintarr%d", LT.counter+1);
-            write("\tmul $t2, $t0, 4\t# offset = i * 4");
-            write("\tadd $t2, $t2, $s0\t\t# actual address in array");
-            write("\tlw $t3, ($t2)\t\t# load the element at index i");
-            write("\tla $a0, false   \t# load the 'false' message");
-            write("\tbeqz $t3, _printfalse%d   \t# don't load the 'true' message", LT.counter);
-            write("\tla $a0, true   \t# load the 'true' message");
-            LT.Label("_printfalse");
-            write("\tli $v0, 4      \t# print string service");
-            write("\tsyscall        \t# print the string");
-            write("\taddi $t0, $t0, 1\t\t# i++");
-            write("\tj _printarr%d", LT.counter-2);
-            LT.Label("_endprintarr");
-        }
-        else if(arg->getType().type == Type::array_i32) {
-            pop("$s0"); // get the address of the beginning of the array
-            write("\tli $t0, 1\t\t# i = 1");
-            write("\tlw $t1, ($s0)\t\t# n = arr.len");
-            LT.Label("_printarr");
-            write("\tbgt $t0, $t1 _endprintarr%d", LT.counter);
-            write("\tmul $t2, $t0, 4\t# offset = i * 4");
-            write("\tadd $t2, $t2, $s0\t\t# actual address in array");
-            write("\tlw $a0, ($t2)\t\t# load the element at index i");
-            write("\tli $v0, 1 \t\t\t# print integer service");
-            write("\tsyscall   \t\t\t# print the number");
-            write("\tli $a0, 0x20  \t\t# load a space");
+        else if(type == Type::Char) {
+            pop("$a0");
             write("\tli $v0, 11    \t\t# print character service");
-            write("\tsyscall       \t\t# print the space");
-            write("\taddi $t0, $t0, 1\t\t# i++");
-            write("\tj _printarr%d", LT.counter-1);
-            LT.Label("_endprintarr");
+            write("\tsyscall       \t\t# print the character");
+        }
+        else if(type == Type::array_bool ||  type == Type::array_i32 || type == Type::Str) {
+            PrintArray(type, LT);
         }
         write("\tli $a0, 0x20  \t\t# load a space");
         write("\tli $v0, 11    \t\t# print character service");
@@ -1662,4 +1669,51 @@ void BoolNode::EmitCode(LabelTracker& LT) {
         write("\tli, $t0, 0\t\t\t# loading 'false'");
     }
     push("$t0");
+}
+
+CharNode::CharNode(std::string val, ErrorData err)
+: ASTNode(err)
+{
+    setType(Type::Char);
+    value = val[1];
+}
+
+CharNode::~CharNode() {}
+char CharNode::getValue() {
+    return value;
+}
+void CharNode::EmitCode(LabelTracker& LT) {
+    write("\t### CharNode ###");
+    write("\tli, $t0, '%c'\t\t\t# loading character", value);
+    push("$t0");
+}
+
+StringNode::StringNode(std::string val, ErrorData err)
+: ASTNode(err) 
+{
+    setType(Type::Str);
+    value = val.substr(1, val.size()-2);
+    std::cout << "val = " << value << '\n';
+}
+
+StringNode::~StringNode() {}
+
+void StringNode::EmitCode(LabelTracker& LT) {
+    std::cout << "Emitting code for StringNode\n";
+    // TODO: put the characters in the string into an array of characters
+    // 1. determine amount of space needed
+    int space = 4*(value.size() + 1);
+    // 2. allocate space on the heap
+    write("\tli, $a0, %d\t\t# request %d bytes from malloc", space, space);
+    write("\tjal malloc");
+    // 3. Store the size of the string in the first word of the array
+    write("\tli $t0, %d\t# size of array", value.size());
+    write("\tsw $t0, ($v0)\t# put the number of elements in the start of the array");
+    // 4. put all the other characters into the array
+    for(size_t i=0; i < value.size(); i++) {
+        write("\tli $t0, '%c'\t\t# load the character", value[i]);
+        // put the value into the array at index i+1
+        write("\tsw $t0, %d($v0)\t\t# place the value into the array", 4*(i+1));
+    }
+    push("$v0");
 }

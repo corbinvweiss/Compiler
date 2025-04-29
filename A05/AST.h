@@ -118,6 +118,25 @@ class BoolNode: public ASTNode {
         void EmitCode(LabelTracker&) override; // Emit code for a boolean literal
 };
 
+class CharNode: public ASTNode {
+    private:
+        char value;
+    public:
+        CharNode(std::string val, ErrorData err);
+        ~CharNode();
+        char getValue();
+        void EmitCode(LabelTracker&) override;
+};
+
+class StringNode: public ASTNode {
+    private:
+        std::string value;
+    public:
+        StringNode(std::string val, ErrorData err);
+        ~StringNode();
+        void EmitCode(LabelTracker&) override;
+};
+
 class TypeNode: public ASTNode {
     public:
         TypeNode(TypeInfo t, ErrorData err);
@@ -133,8 +152,6 @@ class ArrayLiteralNode: public ASTNode {
         ArrayLiteralNode(ASTNode* expression, ErrorData err);
         ~ArrayLiteralNode();
         void append(ASTNode* expression);
-        void setGlobalST(SymbolTable* ST) override;
-        void setLocalST(SymbolTable* ST) override;
         bool TypeCheck() override;
         void EmitCode(LabelTracker&) override; // Emit code for an array literal
 };
