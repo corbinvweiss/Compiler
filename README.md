@@ -8,6 +8,7 @@ The compiler is built up in phases.
 - A02 is a lexer that outputs tokens
 - A03 is a parser that outputs a parsetree representation of code
 - A04 constructs an Abstract Syntax tree.
+- A05 is a complete level 5 compiler that adds support for strings.
 
 ## Run the Compiler
 To run the compiler, navigate to the appropriate directory and execute the following commands:
