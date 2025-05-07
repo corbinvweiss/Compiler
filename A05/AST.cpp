@@ -1367,7 +1367,7 @@ bool LengthNode::TypeCheck() {
     if(!identifier->TypeCheck()) {
         return false;
     }
-    if(!(identifier->getType().type == Type::array_bool || identifier->getType().type == Type::array_i32)) {
+    if(!(identifier->getType().type == Type::array_bool || identifier->getType().type == Type::array_i32 || identifier->getType().type == Type::Str)) {
         error(err_data, "cannot get length of non-array type.");
         return false;
     }
@@ -1457,7 +1457,7 @@ void BinaryNode::setLocalST(SymbolTable* ST) {
 }
 
 bool BinaryNode::BoolInt(TypeInfo t) {
-    if(t.type == Type::i32 || t.type == Type::Bool) {
+    if(t.type == Type::i32 || t.type == Type::Bool || t.type == Type::Char) {
         return true;
     }
     else {

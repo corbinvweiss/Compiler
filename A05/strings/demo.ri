@@ -1,0 +1,11 @@
+fn sayhi(age: i32) {
+    println("hello! You are", age, "years old.");
+}
+
+fn main() {
+    let mut age: i32;
+    print("enter your age: ");
+    age = read();
+    println();
+    sayhi(age);
+}

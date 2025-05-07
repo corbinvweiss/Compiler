@@ -1,0 +1,23 @@
+fn equal(left: str, right: str) -> bool {
+    let mut i: i32;
+    if left.len != right.len {
+        return false;
+    }
+    i = 0;
+    while i < left.len {
+        if left[i] != right[i] {
+            return false;
+        }
+        i += 1;
+    }
+    return true;
+}
+
+fn main() {
+    let mut a: str;
+    let mut b: str;
+    a = "frog";
+    b = "frog";
+    println(equal(a, b));
+    println(equal("frog", "toad"));
+}
